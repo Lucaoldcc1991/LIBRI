@@ -29,7 +29,7 @@ const MONTHS = [
 /* ================= iOS WHITE 3D PALETTE ================= */
 const TEXT_MAIN = '#1C1C1E'
 const TEXT_MUTED = '#8E8E93'
-const TEXT_LIGHT = '#AEAEC0'
+const TEXT_LIGHT = '#636366'
 
 export default function Library() {
   const [books, setBooks] = useState<Book[]>([])
@@ -58,13 +58,13 @@ export default function Library() {
     setBooks(sorted)
   }
 
-  // Funzione per spostare su/giù nell'elenco (scambia i createdAt per preservare l'ordinamento)
-  const moveBook = async (index: number, direction: 'up' | 'down') => {
-    const targetIndex = direction === 'up' ? index - 1 : index + 1
-    if (targetIndex < 0 || targetIndex >= filteredBooks.length) return
+  // Funzione per spostare su/giù nell'elenco (funzionante sull'indice globale)
+  const moveBook = async (filteredIndex: number, direction: 'up' | 'down') => {
+    const targetFilteredIndex = direction === 'up' ? filteredIndex - 1 : filteredIndex + 1
+    if (targetFilteredIndex < 0 || targetFilteredIndex >= filteredBooks.length) return
 
-    const currentBook = filteredBooks[index]
-    const targetBook = filteredBooks[targetIndex]
+    const currentBook = filteredBooks[filteredIndex]
+    const targetBook = filteredBooks[targetFilteredIndex]
 
     if (!currentBook.id || !targetBook.id) return
 
@@ -227,7 +227,6 @@ export default function Library() {
         {filteredBooks.map((book, index) => {
           const country = COUNTRIES.find((c) => c.name === book.country)
           const monthName = book.readingMonth && MONTHS[book.readingMonth - 1]
-          const hasTags = !!book.tags && book.tags.length > 0
 
           return (
             <div key={book.id} style={styles.swipeWrapper}>
@@ -307,7 +306,14 @@ export default function Library() {
                       {country && (
                         <span>{country.flag} {country.name}</span>
                       )}
-                      <span>• {book.pages} pagine</span>
+                      {country && <span>•</span>}
+                      <span>{book.pages} pagine</span>
+                      {book.publicationYear && (
+                        <>
+                          <span>•</span>
+                          <span>{book.publicationYear}</span>
+                        </>
+                      )}
                     </div>
 
                     {book.series && (
@@ -318,16 +324,6 @@ export default function Library() {
                       <p style={styles.reading}>
                         📅 Letto in {monthName} {book.readingYear}
                       </p>
-                    )}
-
-                    {hasTags && (
-                      <div style={styles.tagsWrapper}>
-                        {book.tags!.map((tag) => (
-                          <span key={tag} style={styles.tagChip}>
-                            #{tag}
-                          </span>
-                        ))}
-                      </div>
                     )}
                   </div>
                 </div>
@@ -355,9 +351,10 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     gap: 14,
     background: '#F2F2F7',
-    padding: '16px 16px 32px',
+    padding: '16px 16px 110px',
     minHeight: '100vh',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif'
+    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif',
+    boxSizing: 'border-box'
   },
   header: {
     fontSize: 28,
@@ -513,8 +510,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   genrePillWrapper: {
     display: 'flex',
-    marginTop: 2,
-    marginBottom: 2
+    marginTop: 3,
+    marginBottom: 3
   },
   genrePill: {
     fontSize: 11,
@@ -528,9 +525,11 @@ const styles: Record<string, React.CSSProperties> = {
   metaRow: {
     fontSize: 12,
     color: TEXT_LIGHT,
-    fontWeight: 500,
+    fontWeight: 600,
     display: 'flex',
-    gap: 4
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 2
   },
   series: {
     fontSize: 12,
@@ -543,21 +542,6 @@ const styles: Record<string, React.CSSProperties> = {
     color: TEXT_MAIN,
     fontWeight: 600,
     margin: '2px 0 0 0'
-  },
-  tagsWrapper: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 6
-  },
-  tagChip: {
-    fontSize: 11,
-    fontWeight: 600,
-    color: TEXT_MUTED,
-    background: '#F2F2F7',
-    padding: '2px 8px',
-    borderRadius: 6,
-    boxShadow: 'inset 1px 1px 3px #D8DBE0, inset -1px -1px 3px #FFFFFF'
   },
   modalOverlay: {
     position: 'fixed',

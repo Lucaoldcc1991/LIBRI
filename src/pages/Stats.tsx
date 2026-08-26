@@ -164,7 +164,7 @@ export default function Stats() {
                       height: `${height}%`,
                       background: isHighest
                         ? 'linear-gradient(180deg, #007AFF 0%, #0051A8 100%)'
-                        : 'linear-gradient(180deg, #8E8E93 0%, #636366 100%)'
+                        : 'linear-gradient(180deg, rgba(0, 122, 255, 0.45) 0%, rgba(0, 81, 168, 0.35) 100%)'
                     }}
                   />
                 </div>
@@ -212,7 +212,7 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '16px',
     background: '#F2F2F7',
     minHeight: '100vh',
-    padding: '16px 16px 32px',
+    padding: '16px 16px 110px',
     fontFamily:
       '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif',
     boxSizing: 'border-box'

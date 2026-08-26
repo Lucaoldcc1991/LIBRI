@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { db } from '../db/database'
-import { COUNTRIES } from '../utils/countries'
 
 type Book = {
   id?: number
@@ -10,15 +9,28 @@ type Book = {
   country?: string
   cover?: string
   pages: number
+  publicationYear?: number
+  publishYear?: number
+  year?: number
   readingYear?: number
+  readingMonth?: number | string
+  month?: number | string
   classic?: boolean
   isClassic?: boolean
 }
 
-/* ================= iOS WHITE 3D PALETTE ================= */
+/* ================= iOS WHITE 3D PALETTE (BLUE ACCENT TIMELINE) ================= */
 const TEXT_MAIN = '#1C1C1E'
 const TEXT_MUTED = '#8E8E93'
-const ACCENT_BLUE = '#007AFF'
+const TEXT_LIGHT = '#636366' // Stile identico a Library per i metadati opacizzati
+const ACCENT_BLUE = '#007AFF' // Accento Blu iOS per la timeline
+const ACCENT_HIGHLIGHT = '#FF9500' // Colore speciale per il libro con più pagine (Arancio iOS)
+
+// Mesi in italiano per eventuale conversione da numero a stringa
+const MONTHS_IT = [
+  '', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+  'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
+]
 
 export default function Home() {
   const [books, setBooks] = useState<Book[]>([])
@@ -44,8 +56,22 @@ export default function Home() {
     0
   )
 
+  // Trova il numero massimo di pagine tra i libri letti quest'anno (se ci sono libri)
+  const maxPages = booksThisYear.length > 0
+    ? Math.max(...booksThisYear.map((b) => b.pages || 0))
+    : 0
+
   const isClassic = (b: Book) =>
     b.classic === true || (b as any).isClassic === true
+
+  // Funzione helper per formattare il mese di lettura
+  const formatReadingMonth = (monthVal?: number | string) => {
+    if (!monthVal) return null
+    if (typeof monthVal === 'number' && monthVal >= 1 && monthVal <= 12) {
+      return MONTHS_IT[monthVal]
+    }
+    return monthVal
+  }
 
   return (
     <div style={styles.container}>
@@ -55,15 +81,31 @@ export default function Home() {
         <p style={styles.eyebrow}>Anno {currentYear}</p>
       </div>
 
-      {/* Banner Riassuntivo del Percorso */}
+      {/* Banner Riassuntivo Rinnovato (Stile iOS Widget) */}
       <div style={styles.summaryCard}>
-        <div style={styles.summaryBadge}>🗺️ Il tuo viaggio</div>
-        <h3 style={styles.summaryTitle}>
-          {booksThisYear.length} {booksThisYear.length === 1 ? 'Libro letto' : 'Libri letti'}
-        </h3>
-        <p style={styles.summarySub}>
-          Hai letto <strong style={{ color: ACCENT_BLUE }}>{totalPages.toLocaleString('it-IT')}</strong> pagine nel {currentYear}
-        </p>
+        <div style={styles.statBox}>
+          <span style={styles.statIcon}>📚</span>
+          <div>
+            <h3 style={styles.statValue}>
+              {booksThisYear.length}
+            </h3>
+            <p style={styles.statLabel}>
+              {booksThisYear.length === 1 ? 'Libro letto' : 'Libri letti'}
+            </p>
+          </div>
+        </div>
+
+        <div style={styles.statDivider} />
+
+        <div style={styles.statBox}>
+          <span style={styles.statIcon}>📄</span>
+          <div>
+            <h3 style={styles.statValue}>
+              {totalPages.toLocaleString('it-IT')}
+            </h3>
+            <p style={styles.statLabel}>Pagine</p>
+          </div>
+        </div>
       </div>
 
       <h3 style={styles.sectionTitle}>📍 Percorso di lettura</h3>
@@ -73,11 +115,25 @@ export default function Home() {
         <div style={styles.timelineContainer}>
           <div style={styles.timelineLine} />
           {booksThisYear.map((book, index) => {
-            const countryObj = COUNTRIES.find((c) => c.name === book.country)
+            // Controlla se questo libro è quello con più pagine
+            const isHighestPages = book.pages === maxPages && maxPages > 0
+            
+            // Cerca l'anno di pubblicazione in tutte le varianti possibili del DB
+            const pubYear = book.publicationYear || book.publishYear || book.year
+            const readingMonthFormatted = formatReadingMonth(book.readingMonth || book.month)
+
             return (
               <div key={book.id || index} style={styles.timelineItem}>
-                {/* Nodo 3D numerato */}
-                <div style={styles.timelineNode}>{index + 1}</div>
+                {/* Nodo 3D numerato Blu iOS (cambia colore se ha più pagine) */}
+                <div
+                  style={{
+                    ...styles.timelineNode,
+                    ...(isHighestPages ? styles.timelineNodeHighlight : {})
+                  }}
+                  title={isHighestPages ? 'Libro più lungo dell\'anno!' : undefined}
+                >
+                  {index + 1}
+                </div>
 
                 {/* Scheda del Libro nel Percorso */}
                 <div style={styles.timelineCard}>
@@ -106,15 +162,29 @@ export default function Home() {
                       </div>
                       <p style={styles.bookAuthor}>{book.author}</p>
 
-                      <div style={styles.badgeRow}>
-                        <span style={styles.badge}>📄 {book.pages} pag.</span>
-                        {book.genre && <span style={styles.badge}>🏷️ {book.genre}</span>}
-                        {countryObj && (
-                          <span style={styles.badge}>
-                            {countryObj.flag} {book.country}
-                          </span>
+                      {/* Metadati (Genere, Pagine, Anno) stile Library sopra */}
+                      <div style={styles.metaRow}>
+                        {book.genre && (
+                          <>
+                            <span>{book.genre}</span>
+                            <span>•</span>
+                          </>
+                        )}
+                        <span>{book.pages} pagine</span>
+                        {pubYear && (
+                          <>
+                            <span>•</span>
+                            <span>{pubYear}</span>
+                          </>
                         )}
                       </div>
+
+                      {/* Mese di lettura in fondo con icona */}
+                      {readingMonthFormatted && (
+                        <div style={styles.monthRow}>
+                          <span style={styles.badgeBold}>📅 {readingMonthFormatted}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -143,7 +213,7 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '16px',
     background: '#F2F2F7',
     minHeight: '100vh',
-    padding: '16px 16px 32px',
+    padding: '16px 16px 110px',
     fontFamily:
       '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif',
     boxSizing: 'border-box'
@@ -182,39 +252,58 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   summaryCard: {
-    padding: '20px',
+    padding: '18px 20px',
     borderRadius: '24px',
     background: '#FFFFFF',
     boxShadow: '6px 6px 14px #D8DBE0, -6px -6px 14px #FFFFFF',
     display: 'flex',
-    flexDirection: 'column',
-    gap: '6px'
+    alignItems: 'center',
+    justifyContent: 'space-between'
   },
 
-  summaryBadge: {
-    fontSize: '11px',
-    fontWeight: 700,
-    color: ACCENT_BLUE,
-    textTransform: 'uppercase',
-    letterSpacing: '0.8px'
+  statBox: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    flex: 1
   },
 
-  summaryTitle: {
+  statIcon: {
+    fontSize: '26px',
+    background: '#F2F2F7',
+    padding: '10px',
+    borderRadius: '16px',
+    boxShadow: 'inset 2px 2px 4px #D8DBE0, inset -2px -2px 4px #FFFFFF',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+
+  statValue: {
     fontSize: '22px',
     fontWeight: 800,
     color: TEXT_MAIN,
     margin: 0,
-    letterSpacing: '-0.5px'
+    letterSpacing: '-0.5px',
+    lineHeight: 1.1
   },
 
-  summarySub: {
-    fontSize: '14px',
+  statLabel: {
+    fontSize: '13px',
     color: TEXT_MUTED,
     margin: 0,
-    fontWeight: 500
+    fontWeight: 500,
+    marginTop: '2px'
   },
 
-  /* TIMELINE STYLES */
+  statDivider: {
+    width: '1px',
+    height: '36px',
+    background: '#E5E5EA',
+    margin: '0 16px'
+  },
+
+  /* TIMELINE STYLES (iOS BLUE) */
   timelineContainer: {
     position: 'relative',
     display: 'flex',
@@ -226,12 +315,12 @@ const styles: Record<string, React.CSSProperties> = {
 
   timelineLine: {
     position: 'absolute',
-    top: '16px',
-    bottom: '16px',
-    left: '27px',
-    width: '3px',
-    background: 'linear-gradient(180deg, #007AFF 0%, #D8DBE0 100%)',
-    borderRadius: '2px',
+    top: '18px',
+    bottom: '18px',
+    left: '27.5px',
+    width: '1.5px',
+    background: 'linear-gradient(180deg, rgba(0, 122, 255, 0.4) 0%, rgba(216, 219, 224, 0.5) 100%)',
+    borderRadius: '1px',
     zIndex: 1
   },
 
@@ -258,6 +347,11 @@ const styles: Record<string, React.CSSProperties> = {
     color: ACCENT_BLUE,
     flexShrink: 0,
     marginTop: '12px'
+  },
+
+  timelineNodeHighlight: {
+    border: `2px solid ${ACCENT_HIGHLIGHT}`,
+    color: ACCENT_HIGHLIGHT
   },
 
   timelineCard: {
@@ -330,20 +424,28 @@ const styles: Record<string, React.CSSProperties> = {
     margin: 0
   },
 
-  badgeRow: {
+  metaRow: {
+    fontSize: '12px',
+    color: TEXT_LIGHT,
+    fontWeight: 600,
     display: 'flex',
-    flexWrap: 'wrap',
-    gap: '6px',
-    marginTop: '4px'
+    alignItems: 'center',
+    gap: '5px',
+    marginTop: '2px'
   },
 
-  badge: {
-    fontSize: '10px',
-    fontWeight: 600,
+  monthRow: {
+    display: 'flex',
+    marginTop: '6px'
+  },
+
+  badgeBold: {
+    fontSize: '11px',
+    fontWeight: 700,
     color: TEXT_MAIN,
     background: '#F2F2F7',
-    padding: '3px 6px',
-    borderRadius: '6px',
+    padding: '3px 8px',
+    borderRadius: '8px',
     boxShadow: 'inset 1px 1px 2px #D8DBE0, inset -1px -1px 2px #FFFFFF'
   },
 

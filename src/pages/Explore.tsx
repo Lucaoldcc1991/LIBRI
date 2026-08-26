@@ -836,9 +836,11 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     gap: 16,
     background: '#F2F2F7',
-    padding: '16px 16px 32px',
+    // MODIFICATO: Aumentato il padding inferiore a 110px per non far coprire i contenuti dalla nav bar
+    padding: '16px 16px 110px',
     minHeight: '100vh',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif'
+    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif',
+    boxSizing: 'border-box'
   },
   title: {
     fontSize: 28,
@@ -1053,6 +1055,60 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 12,
     color: TEXT_MUTED
   },
+  letterHeader: {
+    fontSize: 13,
+    fontWeight: 700,
+    color: '#007AFF',
+    marginTop: 4,
+    marginBottom: 2
+  },
+  bookCard: {
+    display: 'flex',
+    gap: 12,
+    padding: 12,
+    borderRadius: 16,
+    background: '#FFFFFF',
+    boxShadow: '4px 4px 10px #D9DCE1, -4px -4px 10px #FFFFFF',
+    alignItems: 'center'
+  },
+  cover: {
+    width: 45,
+    height: 65,
+    objectFit: 'cover',
+    borderRadius: 8
+  },
+  coverPlaceholder: {
+    width: 45,
+    height: 65,
+    borderRadius: 8,
+    background: '#F2F2F7',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 18
+  },
+  info: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 2
+  },
+  bookTitle: {
+    fontSize: 14,
+    fontWeight: 600,
+    color: TEXT_MAIN
+  },
+  bookAuthor: {
+    fontSize: 12,
+    color: TEXT_MUTED
+  },
+  pagesMeta: {
+    fontSize: 11,
+    color: TEXT_MUTED
+  },
+  readingMeta: {
+    fontSize: 11,
+    color: TEXT_MUTED
+  },
   emptyState: {
     display: 'flex',
     flexDirection: 'column',
@@ -1064,67 +1120,14 @@ const styles: Record<string, React.CSSProperties> = {
     boxShadow: '6px 6px 14px #D9DCE1, -6px -6px 14px #FFFFFF'
   },
   emptyIcon: {
-    fontSize: 32,
+    fontSize: 28,
     margin: 0
   },
   emptyText: {
-    fontSize: 14,
-    color: TEXT_MUTED,
-    marginTop: 8
-  },
-  bookCard: {
-    display: 'flex',
-    gap: 14,
-    padding: 14,
-    borderRadius: 18,
-    background: '#FFFFFF',
-    boxShadow: '6px 6px 14px #D9DCE1, -6px -6px 14px #FFFFFF',
-    alignItems: 'center'
-  },
-  cover: {
-    width: 48,
-    height: 70,
-    objectFit: 'cover',
-    borderRadius: 6
-  },
-  coverPlaceholder: {
-    width: 48,
-    height: 70,
-    borderRadius: 6,
-    background: '#F2F2F7',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 20
-  },
-  info: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 4
-  },
-  bookTitle: {
-    fontSize: 15,
-    fontWeight: 700,
-    color: TEXT_MAIN
-  },
-  bookAuthor: {
     fontSize: 13,
-    color: TEXT_MUTED
-  },
-  pagesMeta: {
-    fontSize: 12,
-    color: TEXT_MUTED
-  },
-  readingMeta: {
-    fontSize: 12,
-    color: '#007AFF',
-    fontWeight: 600
-  },
-  letterHeader: {
-    fontSize: 16,
-    fontWeight: 700,
-    color: '#007AFF',
+    color: TEXT_MUTED,
+    fontWeight: 600,
     marginTop: 8,
-    marginBottom: 4
+    margin: 0
   }
 }

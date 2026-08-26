@@ -471,7 +471,8 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '16px',
     background: '#F2F2F7',
     minHeight: '100vh',
-    padding: '16px 16px 32px',
+    // MODIFICATO: Aumentato il padding inferiore a 110px per non far coprire i contenuti dalla nav bar
+    padding: '16px 16px 110px',
     fontFamily:
       '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif',
     boxSizing: 'border-box'
