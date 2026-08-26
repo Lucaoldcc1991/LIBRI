@@ -1,0 +1,94 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  /* Font di sistema iOS (SF Pro) come priorità */
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  /* Sfondo Neumorfico iOS globale */
+  background-color: #F2F2F7;
+  /* Colore testo principale iOS */
+  color: #1C1C1E;
+  line-height: 1.4;
+
+  -webkit-overflow-scrolling: touch;
+  -webkit-tap-highlight-color: transparent;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: 14px;
+}
+
+button {
+  font-family: inherit;
+  /* Transizioni più morbide stile app nativa */
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+button:focus,
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+}
+
+/* Effetto pressione tattile 3D */
+button:active {
+  transform: scale(0.96);
+}
+
+/* ANIMAZIONI CARD (Rese più fluide) */
+.card-animate {
+  animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* UTILITY TEXT AGGIORNATE ALLA PALETTE */
+.muted {
+  color: #8E8E93; /* Grigio secondario iOS */
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.small {
+  font-size: 13px;
+}
+
+.big {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.4px; /* Kerning tipico dei titoli Apple */
+}
+
+/* Opzionale: nasconde la scrollbar di sistema per un look da vera App nativa */
+::-webkit-scrollbar {
+  display: none;
+}
