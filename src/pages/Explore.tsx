@@ -85,7 +85,7 @@ const GENRE_COLOR_MAP: { match: string[]; color: Accent }[] = [
 
 const GENRE_FALLBACK: Accent = { from: '#F3F4F6', to: '#E5E7EB', soft: '#FAFAFA', text: '#4B5563' }
 
-const genreColorFor = (genre?: string): Accent => {
+const _genreColorFor = (genre?: string): Accent => {
   if (!genre) return GENRE_FALLBACK
   const g = genre.toLowerCase()
   const found = GENRE_COLOR_MAP.find(entry => entry.match.some(k => g.includes(k)))
@@ -136,7 +136,6 @@ export default function Explore() {
     setBooks(data)
   }
 
-  /* 🏛️ FILTRO CLASSICI */
   const classicBooks = useMemo(() => {
     return books.filter(b => b.classic === true)
   }, [books])
@@ -146,7 +145,6 @@ export default function Explore() {
     return classicBooks.filter(b => b.author === selectedClassicAuthor)
   }, [classicBooks, selectedClassicAuthor])
 
-  /* 📚 RAGGRUPPAMENTO GENERI */
   const genresList = useMemo(() => {
     const map: Record<string, Book[]> = {}
     books.forEach(b => {
@@ -167,7 +165,6 @@ export default function Explore() {
     return booksByGenre.filter(b => b.author === selectedGenreAuthor)
   }, [booksByGenre, selectedGenreAuthor])
 
-  /* 📖 RAGGRUPPAMENTO SERIE */
   const seriesList = useMemo(() => {
     const map: Record<string, Book[]> = {}
     books.forEach(b => {
@@ -188,7 +185,6 @@ export default function Explore() {
     return booksBySeries.filter(b => b.author === selectedSeriesAuthor)
   }, [booksBySeries, selectedSeriesAuthor])
 
-  /* 🌍 RAGGRUPPAMENTO PAESI */
   const countriesList = useMemo(() => {
     const map: Record<string, Book[]> = {}
     books.forEach(b => {
@@ -211,7 +207,6 @@ export default function Explore() {
     return booksByCountry.filter(b => b.author === selectedCountryAuthor)
   }, [booksByCountry, selectedCountryAuthor])
 
-  /* ⏳ PERIODI STORICI AGGIORNATI */
   const getPeriod = (year?: number) => {
     if (!year) return 'Sconosciuto'
     if (year < 1700) return 'Pre-1700 · Imperi · Medioevo · Gotico'
@@ -251,7 +246,6 @@ export default function Explore() {
     return booksByPeriod.filter(b => b.author === selectedPeriodAuthor)
   }, [booksByPeriod, selectedPeriodAuthor])
 
-  /* 📏 RAGGRUPPAMENTO PER LUNGHEZZA */
   const getLengthCategory = (pages?: number) => {
     if (!pages) return 'Sconosciuto'
     if (pages <= 199) return '📘 Brevi'
@@ -287,7 +281,6 @@ export default function Explore() {
     return booksByLength.filter(b => b.author === selectedLengthAuthor)
   }, [booksByLength, selectedLengthAuthor])
 
-  /* 🏷️ RAGGRUPPAMENTO TAG */
   const tagsList = useMemo(() => {
     const map: Record<string, Book[]> = {}
     books.forEach(b => {
@@ -544,7 +537,6 @@ export default function Explore() {
         </div>
       )}
 
-      {/* 📚 SEZIONE GENERI */}
       {view === 'genres' && !selectedGenre && (
         <div style={styles.stack}>
           {genresList.map(([genre, list]) => {
@@ -581,7 +573,6 @@ export default function Explore() {
         renderCleanBookList(booksByGenreAuthor)
       }
 
-      {/* 🏛️ SEZIONE CLASSICI */}
       {view === 'classics' && !selectedClassicAuthor &&
         renderAuthorsList(classicBooks, setSelectedClassicAuthor)
       }
@@ -590,7 +581,6 @@ export default function Explore() {
         renderCleanBookList(booksByClassicAuthor)
       }
 
-      {/* ⏳ SEZIONE PERIODI STORICI */}
       {view === 'periods' && !selectedPeriod && (
         <div style={styles.stack}>
           {periods.map(([period, list]) => {
@@ -632,7 +622,6 @@ export default function Explore() {
         renderCleanBookList(booksByPeriodAuthor)
       }
 
-      {/* 📖 SEZIONE SERIE */}
       {view === 'series' && !selectedSeries && (
         <div style={styles.stack}>
           {seriesList.length === 0 && (
@@ -664,7 +653,6 @@ export default function Explore() {
         renderCleanBookList(booksBySeriesAuthor)
       }
 
-      {/* 🌍 SEZIONE PAESI */}
       {view === 'countries' && !selectedCountry && (
         <div style={styles.stack}>
           {countriesList.map(([country, list]) => {
@@ -702,7 +690,6 @@ export default function Explore() {
         renderCleanBookList(booksByCountryAuthor)
       }
 
-      {/* 📏 SEZIONE LUNGHEZZA */}
       {view === 'lengths' && !selectedLength && (
         <div style={styles.stack}>
           {lengthsList.map(([category, list]) => {
@@ -744,7 +731,6 @@ export default function Explore() {
         renderCleanBookList(booksByLengthAuthor)
       }
 
-      {/* 🏷️ SEZIONE TAG */}
       {view === 'tags' && !selectedTag && (
         <div style={styles.stack}>
           {tagsList.length === 0 && (
@@ -776,7 +762,6 @@ export default function Explore() {
         renderCleanBookList(booksByTagAuthor)
       }
 
-      {/* 👤 SEZIONE AUTORI */}
       {view === 'authorsAll' && !globalAuthor && (
         <>
           <div style={styles.statsCard}>
@@ -978,114 +963,113 @@ const styles: Record<string, React.CSSProperties> = {
     color: TEXT_MAIN,
     fontSize: 15,
     outline: 'none',
-    boxShadow: 'inset 3px 3px 6px #D8DBE0, inset -3px -3px 6px #FFFFFF'
+    boxShadow: 'inset 4px 4px 8px #D9DCE1, inset -4px -4px 8px #FFFFFF'
   },
   alphabet: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(36px, 1fr))',
-    gap: 8,
-    margin: '4px 0'
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 6,
+    justifyContent: 'center'
   },
   letter: {
-    height: 36,
+    width: 32,
+    height: 32,
     borderRadius: 10,
     border: 'none',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 600,
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 0,
-    lineHeight: 1,
-    transition: 'all 0.15s ease'
+    justifyContent: 'center'
   },
   resetLetters: {
-    padding: '6px 14px',
-    borderRadius: 14,
+    padding: '8px 16px',
+    borderRadius: 16,
     border: 'none',
     background: '#E5E5EA',
     color: TEXT_MAIN,
+    cursor: 'pointer',
     fontSize: 13,
     fontWeight: 600,
-    cursor: 'pointer',
-    alignSelf: 'flex-start'
+    width: 'fit-content',
+    alignSelf: 'center'
   },
   stack: {
     display: 'flex',
     flexDirection: 'column',
-    gap: 10
+    gap: 12
   },
-  letterHeader: {
+  metaLine: {
     fontSize: 14,
-    fontWeight: 700,
+    fontWeight: 600,
     color: TEXT_MUTED,
-    marginTop: 8,
-    marginLeft: 4
+    marginBottom: 4
   },
   rowCard: {
-    padding: 16,
+    padding: '14px 18px',
     borderRadius: 18,
     background: '#FFFFFF',
-    boxShadow: '6px 6px 14px #D8DBE0, -6px -6px 14px #FFFFFF',
-    cursor: 'pointer',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 12
+    boxShadow: '6px 6px 14px #D9DCE1, -6px -6px 14px #FFFFFF',
+    cursor: 'pointer'
   },
   rowCardColumn: {
-    padding: 16,
+    padding: '16px 18px',
     borderRadius: 18,
     background: '#FFFFFF',
-    boxShadow: '6px 6px 14px #D8DBE0, -6px -6px 14px #FFFFFF',
-    cursor: 'pointer',
     display: 'flex',
     flexDirection: 'column',
-    gap: 10
+    gap: 10,
+    boxShadow: '6px 6px 14px #D9DCE1, -6px -6px 14px #FFFFFF',
+    cursor: 'pointer'
   },
   rowCardHeader: {
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 12
+    alignItems: 'center'
   },
   rowTitle: {
     fontSize: 15,
     fontWeight: 600,
-    color: TEXT_MAIN,
-    flex: 1,
-    textOverflow: 'ellipsis',
-    overflow: 'hidden',
-    whiteSpace: 'nowrap'
+    color: TEXT_MAIN
   },
   rightStats: {
     display: 'flex',
     alignItems: 'center',
-    gap: 10,
-    marginLeft: 'auto'
+    gap: 8
+  },
+  pill: {
+    padding: '4px 10px',
+    borderRadius: 12,
+    background: '#F2F2F7',
+    fontSize: 12,
+    fontWeight: 600,
+    color: TEXT_MAIN
   },
   percentageText: {
     fontSize: 13,
     fontWeight: 600,
-    color: TEXT_MUTED,
-    textAlign: 'right',
-    minWidth: '45px'
+    color: TEXT_MUTED
   },
-  pill: {
-    background: '#F2F2F7',
-    color: TEXT_MAIN,
-    padding: '4px 10px',
-    borderRadius: 12,
-    fontSize: 13,
-    fontWeight: 600,
-    boxShadow: 'inset 2px 2px 4px #D8DBE0, inset -2px -2px 4px #FFFFFF'
+  progressTrack: {
+    width: '100%',
+    height: 6,
+    borderRadius: 3,
+    background: '#E5E5EA',
+    overflow: 'hidden'
+  },
+  progressBar: {
+    height: '100%',
+    background: '#007AFF',
+    borderRadius: 3
   },
   periodLabel: {
     display: 'flex',
     flexDirection: 'column',
-    gap: 2,
-    flex: 1
+    gap: 2
   },
   periodYears: {
     fontSize: 15,
@@ -1096,24 +1080,24 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 12,
     color: TEXT_MUTED
   },
-  progressTrack: {
-    height: 6,
-    borderRadius: 3,
-    background: '#F2F2F7',
-    overflow: 'hidden',
-    boxShadow: 'inset 1px 1px 3px #D8DBE0, inset -1px -1px 3px #FFFFFF'
+  emptyState: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    background: '#FFFFFF',
+    borderRadius: 18,
+    boxShadow: '6px 6px 14px #D9DCE1, -6px -6px 14px #FFFFFF'
   },
-  progressBar: {
-    height: '100%',
-    background: '#007AFF',
-    borderRadius: 3,
-    transition: 'width 0.3s ease'
+  emptyIcon: {
+    fontSize: 32,
+    margin: 0
   },
-  metaLine: {
-    fontSize: 13,
-    fontWeight: 600,
+  emptyText: {
+    fontSize: 14,
     color: TEXT_MUTED,
-    marginBottom: 4
+    marginTop: 8
   },
   bookCard: {
     display: 'flex',
@@ -1121,20 +1105,19 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 14,
     borderRadius: 18,
     background: '#FFFFFF',
-    boxShadow: '6px 6px 14px #D8DBE0, -6px -6px 14px #FFFFFF',
+    boxShadow: '6px 6px 14px #D9DCE1, -6px -6px 14px #FFFFFF',
     alignItems: 'center'
   },
   cover: {
     width: 48,
     height: 70,
-    borderRadius: 8,
     objectFit: 'cover',
-    boxShadow: '2px 2px 6px rgba(0,0,0,0.15)'
+    borderRadius: 6
   },
   coverPlaceholder: {
     width: 48,
     height: 70,
-    borderRadius: 8,
+    borderRadius: 6,
     background: '#F2F2F7',
     display: 'flex',
     alignItems: 'center',
@@ -1144,8 +1127,7 @@ const styles: Record<string, React.CSSProperties> = {
   info: {
     display: 'flex',
     flexDirection: 'column',
-    gap: 3,
-    flex: 1
+    gap: 4
   },
   bookTitle: {
     fontSize: 15,
@@ -1163,19 +1145,13 @@ const styles: Record<string, React.CSSProperties> = {
   readingMeta: {
     fontSize: 12,
     color: '#007AFF',
-    fontWeight: 500
+    fontWeight: 600
   },
-  emptyState: {
-    textAlign: 'center',
-    padding: 32
-  },
-  emptyIcon: {
-    fontSize: 32,
-    margin: 0
-  },
-  emptyText: {
-    color: TEXT_MUTED,
-    fontSize: 14,
-    marginTop: 8
+  letterHeader: {
+    fontSize: 16,
+    fontWeight: 700,
+    color: '#007AFF',
+    marginTop: 8,
+    marginBottom: 4
   }
 }
