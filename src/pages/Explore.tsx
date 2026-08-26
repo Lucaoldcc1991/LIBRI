@@ -62,35 +62,8 @@ const LENGTH_RANGES: Record<string, string> = {
   'Sconosciuto': ''
 }
 
-/* ================= iOS WHITE 3D PALETTE ================= */
 const TEXT_MAIN = '#1C1C1E'
 const TEXT_MUTED = '#8E8E93'
-
-type Accent = { from: string; to: string; soft: string; text: string }
-
-const GENRE_COLOR_MAP: { match: string[]; color: Accent }[] = [
-  { match: ['distopi'], color: { from: '#E2E8F0', to: '#CBD5E1', soft: '#F1F5F9', text: '#334155' } },
-  { match: ['horror', 'gotic', 'paranormal'], color: { from: '#E5E7EB', to: '#D1D5DB', soft: '#F3F4F6', text: '#374151' } },
-  { match: ['giallo', 'noir', 'legal'], color: { from: '#E0E7FF', to: '#C7D2FE', soft: '#EEF2FF', text: '#3730A3' } },
-  { match: ['thriller'], color: { from: '#F1F5F9', to: '#E2E8F0', soft: '#F8FAFC', text: '#475569' } },
-  { match: ['realis', 'psicolog', 'filosof'], color: { from: '#F3F4F6', to: '#E5E7EB', soft: '#F9FAFB', text: '#4B5563' } },
-  { match: ['storic', 'formazione', 'autobiograf'], color: { from: '#E0F2FE', to: '#BAE6FD', soft: '#F0F9FF', text: '#0369A1' } },
-  { match: ['fantascienza', 'sci-fi', 'sci fi'], color: { from: '#E0E7FF', to: '#C7D2FE', soft: '#EEF2FF', text: '#4338CA' } },
-  { match: ['saggi'], color: { from: '#ECECF1', to: '#D4D4D8', soft: '#F4F4F5', text: '#3F3F46' } },
-  { match: ['avventura'], color: { from: '#E2E8F0', to: '#CBD5E1', soft: '#F1F5F9', text: '#334155' } },
-  { match: ['fumett', 'graphic', 'manga'], color: { from: '#F1F5F9', to: '#E2E8F0', soft: '#F8FAFC', text: '#475569' } },
-  { match: ['ragazz'], color: { from: '#F3F4F6', to: '#E5E7EB', soft: '#F9FAFB', text: '#4B5563' } },
-  { match: ['fantasy'], color: { from: '#EEF2FF', to: '#E0E7FF', soft: '#F5F8FF', text: '#3730A3' } }
-]
-
-const GENRE_FALLBACK: Accent = { from: '#F3F4F6', to: '#E5E7EB', soft: '#FAFAFA', text: '#4B5563' }
-
-const _genreColorFor = (genre?: string): Accent => {
-  if (!genre) return GENRE_FALLBACK
-  const g = genre.toLowerCase()
-  const found = GENRE_COLOR_MAP.find(entry => entry.match.some(k => g.includes(k)))
-  return found ? found.color : GENRE_FALLBACK
-}
 
 const HOME_CARDS: { view: View; icon: string; title: string; desc: string }[] = [
   { view: 'authorsAll', icon: '👤', title: 'Autori', desc: 'Esplora gli autori' },
