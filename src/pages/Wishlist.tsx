@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { db } from '../db/database'
 
 type WishlistItem = {
@@ -34,7 +34,11 @@ export default function Wishlist() {
   const [author, setAuthor] = useState('')
   const [genre, setGenre] = useState('')
   const [genreCustom, setGenreCustom] = useState('')
+
+  // Stati per la ricerca e i filtri a tendina
   const [search, setSearch] = useState('')
+  const [selectedAuthorFilter, setSelectedAuthorFilter] = useState<string>('')
+  const [selectedGenreFilter, setSelectedGenreFilter] = useState<string>('')
 
   useEffect(() => {
     load()
@@ -52,7 +56,6 @@ export default function Wishlist() {
   const addItem = async () => {
     if (!title.trim() || !author.trim() || !genre) return
 
-    // Unisce il genere selezionato dal menu e il testo libero (se presente)
     const finalGenre = genreCustom.trim()
       ? `${genre} - ${genreCustom.trim()}`
       : genre
@@ -77,16 +80,52 @@ export default function Wishlist() {
     load()
   }
 
+  // Estrae gli autori unici presenti nella wishlist per popolarele opzioni della tendina
+  const wishlistAuthors = useMemo(() => {
+    const set = new Set<string>()
+    items.forEach((i) => {
+      if (i.author) set.add(i.author.trim())
+    })
+    return Array.from(set).sort((a, b) => a.localeCompare(b))
+  }, [items])
+
+  // Estrae i generi unici presenti nella wishlist per la tendina dei generi
+  const wishlistGenres = useMemo(() => {
+    const set = new Set<string>()
+    items.forEach((i) => {
+      if (i.genre) set.add(i.genre.trim())
+    })
+    return Array.from(set).sort((a, b) => a.localeCompare(b))
+  }, [items])
+
+  // Filtra i libri della wishlist
   const filtered = items.filter((i) => {
-    const q = search.toLowerCase()
-    return (
+    const q = search.toLowerCase().trim()
+    const matchText =
+      !q ||
       i.title.toLowerCase().includes(q) ||
       i.author.toLowerCase().includes(q) ||
       i.genre.toLowerCase().includes(q)
-    )
+
+    const matchAuthor =
+      !selectedAuthorFilter ||
+      i.author.trim().toLowerCase() === selectedAuthorFilter.trim().toLowerCase()
+
+    const matchGenre =
+      !selectedGenreFilter ||
+      i.genre.toLowerCase().includes(selectedGenreFilter.toLowerCase())
+
+    return matchText && matchAuthor && matchGenre
   })
 
   const isValid = title.trim() && author.trim() && genre
+  const hasActiveFilters = !!search || !!selectedAuthorFilter || !!selectedGenreFilter
+
+  const resetFilters = () => {
+    setSearch('')
+    setSelectedAuthorFilter('')
+    setSelectedGenreFilter('')
+  }
 
   return (
     <div style={styles.container}>
@@ -100,7 +139,7 @@ export default function Wishlist() {
         </p>
       </div>
 
-      {/* FORM */}
+      {/* FORM ORIGINALE */}
       <div style={styles.formCard}>
         <span style={styles.sectionLabel}>Aggiungi un desiderio</span>
 
@@ -151,19 +190,70 @@ export default function Wishlist() {
         </button>
       </div>
 
-      {/* SEARCH */}
+      {/* SEZIONE DI RICERCA CON TENDINE STILE iOS */}
       {items.length > 0 && (
-        <div style={styles.searchContainer}>
+        <div style={styles.searchSectionCard}>
+          <span style={styles.sectionLabel}>Cerca & Filtra</span>
+
+          {/* Input testo libero */}
           <input
-            placeholder="🔍 Cerca nella wishlist..."
+            placeholder="🔍 Cerca per titolo o parola chiave..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             style={styles.searchInput}
           />
+
+          {/* Griglia Tendine Filtri */}
+          <div style={styles.selectGrid}>
+            {/* Tendina Autori */}
+            <div style={styles.selectWrapper}>
+              <select
+                value={selectedAuthorFilter}
+                onChange={(e) => setSelectedAuthorFilter(e.target.value)}
+                style={{
+                  ...styles.selectInput,
+                  color: selectedAuthorFilter ? TEXT_MAIN : TEXT_MUTED
+                }}
+              >
+                <option value="">👤 Tutti gli autori</option>
+                {wishlistAuthors.map((a) => (
+                  <option key={a} value={a}>
+                    {a}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Tendina Generi */}
+            <div style={styles.selectWrapper}>
+              <select
+                value={selectedGenreFilter}
+                onChange={(e) => setSelectedGenreFilter(e.target.value)}
+                style={{
+                  ...styles.selectInput,
+                  color: selectedGenreFilter ? TEXT_MAIN : TEXT_MUTED
+                }}
+              >
+                <option value="">🏷️ Tutti i generi</option>
+                {wishlistGenres.map((g) => (
+                  <option key={g} value={g}>
+                    {g}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Reset Filtri */}
+          {hasActiveFilters && (
+            <button onClick={resetFilters} style={styles.resetButton}>
+              Mostra tutti i libri
+            </button>
+          )}
         </div>
       )}
 
-      {/* LISTA */}
+      {/* LISTA LIBRI */}
       <div style={styles.list}>
         {filtered.map((item) => (
           <div key={item.id} style={styles.card}>
@@ -186,7 +276,7 @@ export default function Wishlist() {
         {items.length > 0 && filtered.length === 0 && (
           <div style={styles.emptyState}>
             <p style={styles.emptyIcon}>🔍</p>
-            <p style={styles.emptyText}>Nessun risultato per questa ricerca.</p>
+            <p style={styles.emptyText}>Nessun libro corrisponde ai filtri selezionati.</p>
           </div>
         )}
 
@@ -214,7 +304,6 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '16px',
     background: '#F2F2F7',
     minHeight: '100vh',
-    // MODIFICATO: Aumentato il padding inferiore a 110px per non far coprire i contenuti dalla nav bar
     padding: '16px 16px 110px',
     fontFamily:
       '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif',
@@ -255,6 +344,16 @@ const styles: Record<string, React.CSSProperties> = {
     boxShadow: '6px 6px 14px #D8DBE0, -6px -6px 14px #FFFFFF'
   },
 
+  searchSectionCard: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+    padding: '16px',
+    borderRadius: '24px',
+    background: '#FFFFFF',
+    boxShadow: '6px 6px 14px #D8DBE0, -6px -6px 14px #FFFFFF'
+  },
+
   sectionLabel: {
     fontSize: '11px',
     fontWeight: 700,
@@ -278,6 +377,47 @@ const styles: Record<string, React.CSSProperties> = {
     boxSizing: 'border-box'
   },
 
+  searchInput: {
+    width: '100%',
+    padding: '12px 14px',
+    borderRadius: '14px',
+    border: 'none',
+    background: '#F2F2F7',
+    color: TEXT_MAIN,
+    fontSize: '14px',
+    fontWeight: 500,
+    boxShadow: 'inset 2px 2px 5px #D8DBE0, inset -2px -2px 5px #FFFFFF',
+    outline: 'none',
+    boxSizing: 'border-box'
+  },
+
+  selectGrid: {
+    display: 'flex',
+    gap: '10px',
+    width: '100%'
+  },
+
+  selectWrapper: {
+    flex: 1,
+    position: 'relative'
+  },
+
+  selectInput: {
+    width: '100%',
+    padding: '10px 12px',
+    borderRadius: '14px',
+    border: 'none',
+    background: '#FFFFFF',
+    fontSize: '13px',
+    fontWeight: 600,
+    boxShadow: '3px 3px 8px #D8DBE0, -3px -3px 8px #FFFFFF',
+    outline: 'none',
+    boxSizing: 'border-box',
+    cursor: 'pointer',
+    appearance: 'none',
+    WebkitAppearance: 'none'
+  },
+
   addButton: {
     marginTop: '4px',
     padding: '14px',
@@ -291,22 +431,17 @@ const styles: Record<string, React.CSSProperties> = {
     transition: 'all 0.2s ease'
   },
 
-  searchContainer: {
-    marginTop: '4px'
-  },
-
-  searchInput: {
-    width: '100%',
-    padding: '12px 16px',
-    borderRadius: '16px',
+  resetButton: {
+    alignSelf: 'center',
+    padding: '8px 16px',
+    borderRadius: '12px',
     border: 'none',
-    background: '#FFFFFF',
+    background: '#E5E5EA',
     color: TEXT_MAIN,
-    fontSize: '14px',
-    fontWeight: 500,
-    boxShadow: '4px 4px 10px #D8DBE0, -4px -4px 10px #FFFFFF',
-    outline: 'none',
-    boxSizing: 'border-box'
+    fontSize: '12px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    marginTop: '4px'
   },
 
   list: {

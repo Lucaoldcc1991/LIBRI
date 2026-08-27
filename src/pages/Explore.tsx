@@ -93,7 +93,6 @@ export default function Explore() {
   const [selectedGenreAuthor, setSelectedGenreAuthor] = useState<string | null>(null)
   const [selectedClassicAuthor, setSelectedClassicAuthor] = useState<string | null>(null)
   const [selectedPeriodAuthor, setSelectedPeriodAuthor] = useState<string | null>(null)
-  const [selectedSeriesAuthor, setSelectedSeriesAuthor] = useState<string | null>(null)
   const [selectedCountryAuthor, setSelectedCountryAuthor] = useState<string | null>(null)
   const [selectedLengthAuthor, setSelectedLengthAuthor] = useState<string | null>(null)
 
@@ -152,11 +151,6 @@ export default function Explore() {
     if (!selectedSeries) return []
     return books.filter(b => b.series === selectedSeries)
   }, [books, selectedSeries])
-
-  const booksBySeriesAuthor = useMemo(() => {
-    if (!selectedSeriesAuthor) return []
-    return booksBySeries.filter(b => b.author === selectedSeriesAuthor)
-  }, [booksBySeries, selectedSeriesAuthor])
 
   const countriesList = useMemo(() => {
     const map: Record<string, Book[]> = {}
@@ -362,9 +356,7 @@ export default function Explore() {
         setView('home')
       }
     } else if (view === 'series') {
-      if (selectedSeriesAuthor) {
-        setSelectedSeriesAuthor(null)
-      } else if (selectedSeries) {
+      if (selectedSeries) {
         setSelectedSeries(null)
       } else {
         setView('home')
@@ -451,7 +443,7 @@ export default function Explore() {
         <div style={styles.metaLine}>📖 {sortedList.length} libri</div>
 
         {sortedList.map(b => {
-          const month = b.readingMonth ? MONTHS[b.readingMonth - 1] : ''
+          const monthStr = b.readingMonth ? MONTHS[b.readingMonth - 1] : ''
 
           return (
             <div key={b.id} style={styles.bookCard}>
@@ -471,9 +463,9 @@ export default function Explore() {
                     {b.pages} pagine
                   </div>
                 )}
-                {month && b.readingYear && (
+                {monthStr && b.readingYear && (
                   <div style={styles.readingMeta}>
-                    📅 {month} {b.readingYear}
+                    📅 {monthStr} {b.readingYear}
                   </div>
                 )}
               </div>
@@ -512,29 +504,39 @@ export default function Explore() {
 
       {view === 'genres' && !selectedGenre && (
         <div style={styles.stack}>
-          {genresList.map(([genre, list]) => {
-            const pct = totalBooks > 0 ? ((list.length / totalBooks) * 100).toFixed(1) : '0'
+          {(() => {
+            const maxCount = Math.max(...genresList.map(([, l]) => l.length), 0)
+            return genresList.map(([genre, list]) => {
+              const pct = totalBooks > 0 ? ((list.length / totalBooks) * 100).toFixed(1) : '0'
+              const isMax = list.length === maxCount && maxCount > 0
 
-            return (
-              <div
-                key={genre}
-                style={styles.rowCardColumn}
-                onClick={() => setSelectedGenre(genre)}
-              >
-                <div style={styles.rowCardHeader}>
-                  <span style={styles.rowTitle}>{genre}</span>
-                  <div style={styles.rightStats}>
-                    <span style={styles.percentageText}>{pct}%</span>
-                    <span style={styles.pill}>{list.length}</span>
+              return (
+                <div
+                  key={genre}
+                  style={styles.rowCardColumn}
+                  onClick={() => setSelectedGenre(genre)}
+                >
+                  <div style={styles.rowCardHeader}>
+                    <span style={styles.rowTitle}>{genre}</span>
+                    <div style={styles.rightStats}>
+                      <span style={styles.percentageText}>{pct}%</span>
+                      <span style={styles.pill}>{list.length}</span>
+                    </div>
+                  </div>
+
+                  <div style={styles.progressTrack}>
+                    <div
+                      style={{
+                        ...styles.progressBar,
+                        width: `${pct}%`,
+                        background: isMax ? '#FF9500' : '#007AFF'
+                      }}
+                    />
                   </div>
                 </div>
-
-                <div style={styles.progressTrack}>
-                  <div style={{ ...styles.progressBar, width: `${pct}%` }} />
-                </div>
-              </div>
-            )
-          })}
+              )
+            })
+          })()}
         </div>
       )}
 
@@ -556,34 +558,44 @@ export default function Explore() {
 
       {view === 'periods' && !selectedPeriod && (
         <div style={styles.stack}>
-          {periods.map(([period, list]) => {
-            const [years, ...descParts] = period.split(' · ')
-            const desc = descParts.join(' · ')
-            const pct = totalBooks > 0 ? ((list.length / totalBooks) * 100).toFixed(1) : '0'
+          {(() => {
+            const maxCount = Math.max(...periods.map(([, l]) => l.length), 0)
+            return periods.map(([period, list]) => {
+              const [years, ...descParts] = period.split(' · ')
+              const desc = descParts.join(' · ')
+              const pct = totalBooks > 0 ? ((list.length / totalBooks) * 100).toFixed(1) : '0'
+              const isMax = list.length === maxCount && maxCount > 0
 
-            return (
-              <div
-                key={period}
-                style={styles.rowCardColumn}
-                onClick={() => setSelectedPeriod(period)}
-              >
-                <div style={styles.rowCardHeader}>
-                  <span style={styles.periodLabel}>
-                    <span style={styles.periodYears}>{years}</span>
-                    {desc && <span style={styles.periodDesc}>{desc}</span>}
-                  </span>
-                  <div style={styles.rightStats}>
-                    <span style={styles.percentageText}>{pct}%</span>
-                    <span style={styles.pill}>{list.length}</span>
+              return (
+                <div
+                  key={period}
+                  style={styles.rowCardColumn}
+                  onClick={() => setSelectedPeriod(period)}
+                >
+                  <div style={styles.rowCardHeader}>
+                    <span style={styles.periodLabel}>
+                      <span style={styles.periodYears}>{years}</span>
+                      {desc && <span style={styles.periodDesc}>{desc}</span>}
+                    </span>
+                    <div style={styles.rightStats}>
+                      <span style={styles.percentageText}>{pct}%</span>
+                      <span style={styles.pill}>{list.length}</span>
+                    </div>
+                  </div>
+
+                  <div style={styles.progressTrack}>
+                    <div
+                      style={{
+                        ...styles.progressBar,
+                        width: `${pct}%`,
+                        background: isMax ? '#FF9500' : '#007AFF'
+                      }}
+                    />
                   </div>
                 </div>
-
-                <div style={styles.progressTrack}>
-                  <div style={{ ...styles.progressBar, width: `${pct}%` }} />
-                </div>
-              </div>
-            )
-          })}
+              )
+            })
+          })()}
         </div>
       )}
 
@@ -618,40 +630,46 @@ export default function Explore() {
         </div>
       )}
 
-      {view === 'series' && selectedSeries && !selectedSeriesAuthor &&
-        renderAuthorsList(booksBySeries, setSelectedSeriesAuthor)
-      }
-
-      {view === 'series' && selectedSeries && selectedSeriesAuthor &&
-        renderCleanBookList(booksBySeriesAuthor)
+      {view === 'series' && selectedSeries &&
+        renderCleanBookList(booksBySeries)
       }
 
       {view === 'countries' && !selectedCountry && (
         <div style={styles.stack}>
-          {countriesList.map(([country, list]) => {
-            const flag = COUNTRIES.find(c => c.name === country)?.flag
-            const pct = totalBooks > 0 ? ((list.length / totalBooks) * 100).toFixed(1) : '0'
+          {(() => {
+            const maxCount = Math.max(...countriesList.map(([, l]) => l.length), 0)
+            return countriesList.map(([country, list]) => {
+              const flag = COUNTRIES.find(c => c.name === country)?.flag
+              const pct = totalBooks > 0 ? ((list.length / totalBooks) * 100).toFixed(1) : '0'
+              const isMax = list.length === maxCount && maxCount > 0
 
-            return (
-              <div
-                key={country}
-                style={styles.rowCardColumn}
-                onClick={() => setSelectedCountry(country)}
-              >
-                <div style={styles.rowCardHeader}>
-                  <span style={styles.rowTitle}>{flag ? `${flag} ` : ''}{country}</span>
-                  <div style={styles.rightStats}>
-                    <span style={styles.percentageText}>{pct}%</span>
-                    <span style={styles.pill}>{list.length}</span>
+              return (
+                <div
+                  key={country}
+                  style={styles.rowCardColumn}
+                  onClick={() => setSelectedCountry(country)}
+                >
+                  <div style={styles.rowCardHeader}>
+                    <span style={styles.rowTitle}>{flag ? `${flag} ` : ''}{country}</span>
+                    <div style={styles.rightStats}>
+                      <span style={styles.percentageText}>{pct}%</span>
+                      <span style={styles.pill}>{list.length}</span>
+                    </div>
+                  </div>
+
+                  <div style={styles.progressTrack}>
+                    <div
+                      style={{
+                        ...styles.progressBar,
+                        width: `${pct}%`,
+                        background: isMax ? '#FF9500' : '#007AFF'
+                      }}
+                    />
                   </div>
                 </div>
-
-                <div style={styles.progressTrack}>
-                  <div style={{ ...styles.progressBar, width: `${pct}%` }} />
-                </div>
-              </div>
-            )
-          })}
+              )
+            })
+          })()}
         </div>
       )}
 
@@ -665,34 +683,44 @@ export default function Explore() {
 
       {view === 'lengths' && !selectedLength && (
         <div style={styles.stack}>
-          {lengthsList.map(([category, list]) => {
-            const pct = totalBooks > 0 ? ((list.length / totalBooks) * 100).toFixed(1) : '0'
+          {(() => {
+            const maxCount = Math.max(...lengthsList.map(([, l]) => l.length), 0)
+            return lengthsList.map(([category, list]) => {
+              const pct = totalBooks > 0 ? ((list.length / totalBooks) * 100).toFixed(1) : '0'
+              const isMax = list.length === maxCount && maxCount > 0
 
-            return (
-              <div
-                key={category}
-                style={styles.rowCardColumn}
-                onClick={() => setSelectedLength(category)}
-              >
-                <div style={styles.rowCardHeader}>
-                  <span style={styles.periodLabel}>
-                    <span style={styles.periodYears}>{category}</span>
-                    {LENGTH_RANGES[category] && (
-                      <span style={styles.periodDesc}>{LENGTH_RANGES[category]}</span>
-                    )}
-                  </span>
-                  <div style={styles.rightStats}>
-                    <span style={styles.percentageText}>{pct}%</span>
-                    <span style={styles.pill}>{list.length}</span>
+              return (
+                <div
+                  key={category}
+                  style={styles.rowCardColumn}
+                  onClick={() => setSelectedLength(category)}
+                >
+                  <div style={styles.rowCardHeader}>
+                    <span style={styles.periodLabel}>
+                      <span style={styles.periodYears}>{category}</span>
+                      {LENGTH_RANGES[category] && (
+                        <span style={styles.periodDesc}>{LENGTH_RANGES[category]}</span>
+                      )}
+                    </span>
+                    <div style={styles.rightStats}>
+                      <span style={styles.percentageText}>{pct}%</span>
+                      <span style={styles.pill}>{list.length}</span>
+                    </div>
+                  </div>
+
+                  <div style={styles.progressTrack}>
+                    <div
+                      style={{
+                        ...styles.progressBar,
+                        width: `${pct}%`,
+                        background: isMax ? '#FF9500' : '#007AFF'
+                      }}
+                    />
                   </div>
                 </div>
-
-                <div style={styles.progressTrack}>
-                  <div style={{ ...styles.progressBar, width: `${pct}%` }} />
-                </div>
-              </div>
-            )
-          })}
+              )
+            })
+          })()}
         </div>
       )}
 
@@ -836,7 +864,6 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     gap: 16,
     background: '#F2F2F7',
-    // MODIFICATO: Aumentato il padding inferiore a 110px per non far coprire i contenuti dalla nav bar
     padding: '16px 16px 110px',
     minHeight: '100vh',
     fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif',
@@ -1038,7 +1065,6 @@ const styles: Record<string, React.CSSProperties> = {
   },
   progressBar: {
     height: '100%',
-    background: '#007AFF',
     borderRadius: 3
   },
   periodLabel: {
@@ -1055,79 +1081,89 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 12,
     color: TEXT_MUTED
   },
-  letterHeader: {
-    fontSize: 13,
-    fontWeight: 700,
-    color: '#007AFF',
-    marginTop: 4,
-    marginBottom: 2
+  emptyState: {
+    textAlign: 'center',
+    padding: '40px 20px',
+    color: TEXT_MUTED
+  },
+  emptyIcon: {
+    fontSize: 32,
+    marginBottom: 8
+  },
+  emptyText: {
+    fontSize: 14,
+    margin: 0
   },
   bookCard: {
-    display: 'flex',
-    gap: 12,
-    padding: 12,
-    borderRadius: 16,
+    padding: 14,
+    borderRadius: 18,
     background: '#FFFFFF',
-    boxShadow: '4px 4px 10px #D9DCE1, -4px -4px 10px #FFFFFF',
-    alignItems: 'center'
+    display: 'flex',
+    gap: 14,
+    alignItems: 'center',
+    boxShadow: '6px 6px 14px #D9DCE1, -6px -6px 14px #FFFFFF'
   },
   cover: {
-    width: 45,
-    height: 65,
+    width: 48,
+    height: 70,
     objectFit: 'cover',
-    borderRadius: 8
+    borderRadius: 8,
+    background: '#E5E5EA'
   },
   coverPlaceholder: {
-    width: 45,
-    height: 65,
+    width: 48,
+    height: 70,
     borderRadius: 8,
-    background: '#F2F2F7',
+    background: '#E5E5EA',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: 18
+    fontSize: 20,
+    flexShrink: 0
   },
   info: {
     display: 'flex',
     flexDirection: 'column',
-    gap: 2
+    gap: 2,
+    overflow: 'hidden'
   },
   bookTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: 600,
-    color: TEXT_MAIN
+    color: TEXT_MAIN,
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis'
   },
   bookAuthor: {
-    fontSize: 12,
-    color: TEXT_MUTED
-  },
-  pagesMeta: {
-    fontSize: 11,
-    color: TEXT_MUTED
-  },
-  readingMeta: {
-    fontSize: 11,
-    color: TEXT_MUTED
-  },
-  emptyState: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-    background: '#FFFFFF',
-    borderRadius: 18,
-    boxShadow: '6px 6px 14px #D9DCE1, -6px -6px 14px #FFFFFF'
-  },
-  emptyIcon: {
-    fontSize: 28,
-    margin: 0
-  },
-  emptyText: {
     fontSize: 13,
     color: TEXT_MUTED,
-    fontWeight: 600,
+    fontWeight: 500
+  },
+  pagesMeta: {
+    fontSize: 12,
+    color: TEXT_MUTED,
+    marginTop: 2
+  },
+  readingMeta: {
+    fontSize: 12,
+    color: TEXT_MAIN,
+    fontWeight: 500,
+    background: '#E5E5EA',
+    padding: '3px 8px',
+    borderRadius: 10,
+    marginTop: 4,
+    width: 'fit-content',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 4
+  },
+  letterHeader: {
+    fontSize: 13,
+    fontWeight: 700,
+    color: '#007AFF',
     marginTop: 8,
-    margin: 0
+    marginBottom: 4,
+    paddingLeft: 4
   }
 }

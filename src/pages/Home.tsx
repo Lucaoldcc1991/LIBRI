@@ -162,14 +162,8 @@ export default function Home() {
                       </div>
                       <p style={styles.bookAuthor}>{book.author}</p>
 
-                      {/* Metadati (Genere, Pagine, Anno) stile Library sopra */}
+                      {/* Metadati (Pagine, Anno) senza Genere */}
                       <div style={styles.metaRow}>
-                        {book.genre && (
-                          <>
-                            <span>{book.genre}</span>
-                            <span>•</span>
-                          </>
-                        )}
                         <span>{book.pages} pagine</span>
                         {pubYear && (
                           <>

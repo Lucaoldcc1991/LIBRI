@@ -58,7 +58,7 @@ export default function Library() {
     setBooks(sorted)
   }
 
-  // Funzione per spostare su/giù nell'elenco (funzionante sull'indice globale)
+  // Funzione corretta per spostare i libri su e giù nell'elenco
   const moveBook = async (filteredIndex: number, direction: 'up' | 'down') => {
     const targetFilteredIndex = direction === 'up' ? filteredIndex - 1 : filteredIndex + 1
     if (targetFilteredIndex < 0 || targetFilteredIndex >= filteredBooks.length) return
@@ -68,15 +68,40 @@ export default function Library() {
 
     if (!currentBook.id || !targetBook.id) return
 
-    // Scambiamo il valore di createdAt per invertire la posizione nel DB
-    const tempTime = currentBook.createdAt
-    currentBook.createdAt = targetBook.createdAt
-    targetBook.createdAt = tempTime
+    // 1. Scambiamo le date di lettura se differiscono
+    const tempYear = currentBook.readingYear
+    const tempMonth = currentBook.readingMonth
+    currentBook.readingYear = targetBook.readingYear
+    currentBook.readingMonth = targetBook.readingMonth
+    targetBook.readingYear = tempYear
+    targetBook.readingMonth = tempMonth
 
-    await db.books.update(currentBook.id, { createdAt: currentBook.createdAt })
-    await db.books.update(targetBook.id, { createdAt: targetBook.createdAt })
+    // 2. Scambiamo createdAt (e garantiamo che siano distinti)
+    let tempCreated = currentBook.createdAt ?? Date.now()
+    let targetCreated = targetBook.createdAt ?? (Date.now() - 1000)
 
-    loadBooks()
+    if (tempCreated === targetCreated) {
+      tempCreated = Date.now()
+      targetCreated = Date.now() - 1000
+    }
+
+    currentBook.createdAt = targetCreated
+    targetBook.createdAt = tempCreated
+
+    // 3. Aggiorniamo il database Dexie
+    await db.books.update(currentBook.id, {
+      readingYear: currentBook.readingYear,
+      readingMonth: currentBook.readingMonth,
+      createdAt: currentBook.createdAt
+    })
+    await db.books.update(targetBook.id, {
+      readingYear: targetBook.readingYear,
+      readingMonth: targetBook.readingMonth,
+      createdAt: targetBook.createdAt
+    })
+
+    // 4. Ricarichiamo la lista ordinata
+    await loadBooks()
   }
 
   const years = [...new Set(
@@ -226,23 +251,41 @@ export default function Library() {
       <div style={styles.list}>
         {filteredBooks.map((book, index) => {
           const country = COUNTRIES.find((c) => c.name === book.country)
-          const monthName = book.readingMonth && MONTHS[book.readingMonth - 1]
+          const monthName = book.readingMonth ? MONTHS[book.readingMonth - 1] : null
 
           return (
             <div key={book.id} style={styles.swipeWrapper}>
-              {/* Pulsanti Azioni e Spostamento */}
+              {/* Pulsanti Azioni e Spostamento nascosti dietro lo swipe */}
               <div style={styles.actionsBehind}>
                 <button
-                  style={styles.actionBtn}
-                  onClick={() => moveBook(index, 'up')}
+                  style={{
+                    ...styles.actionBtn,
+                    opacity: index === 0 ? 0.3 : 1,
+                    cursor: index === 0 ? 'not-allowed' : 'pointer'
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    moveBook(index, 'up')
+                  }}
+                  onTouchStart={(e) => e.stopPropagation()}
+                  onTouchEnd={(e) => e.stopPropagation()}
                   disabled={index === 0}
                   title="Sposta Su"
                 >
                   ⬆️
                 </button>
                 <button
-                  style={styles.actionBtn}
-                  onClick={() => moveBook(index, 'down')}
+                  style={{
+                    ...styles.actionBtn,
+                    opacity: index === filteredBooks.length - 1 ? 0.3 : 1,
+                    cursor: index === filteredBooks.length - 1 ? 'not-allowed' : 'pointer'
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    moveBook(index, 'down')
+                  }}
+                  onTouchStart={(e) => e.stopPropagation()}
+                  onTouchEnd={(e) => e.stopPropagation()}
                   disabled={index === filteredBooks.length - 1}
                   title="Sposta Giù"
                 >
@@ -250,13 +293,23 @@ export default function Library() {
                 </button>
                 <button
                   style={styles.actionBtn}
-                  onClick={() => openEdit(book)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    openEdit(book)
+                  }}
+                  onTouchStart={(e) => e.stopPropagation()}
+                  onTouchEnd={(e) => e.stopPropagation()}
                 >
                   ✏️
                 </button>
                 <button
                   style={styles.actionBtn}
-                  onClick={() => deleteBook(book.id)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    deleteBook(book.id)
+                  }}
+                  onTouchStart={(e) => e.stopPropagation()}
+                  onTouchEnd={(e) => e.stopPropagation()}
                 >
                   🗑️
                 </button>
@@ -320,10 +373,13 @@ export default function Library() {
                       <p style={styles.series}>📖 {book.series}</p>
                     )}
 
-                    {monthName && book.readingYear && (
-                      <p style={styles.reading}>
-                        📅 Letto in {monthName} {book.readingYear}
-                      </p>
+                    {/* Data di Lettura - Pillola stile iOS App con testo Nero */}
+                    {(monthName || book.readingYear) && (
+                      <div style={styles.readingPillWrapper}>
+                        <span style={styles.readingPill}>
+                          📅 {[monthName, book.readingYear].filter(Boolean).join(' ')}
+                        </span>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -431,7 +487,8 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'center',
     gap: 4,
     paddingRight: 6,
-    background: '#F2F2F7'
+    background: '#F2F2F7',
+    zIndex: 1
   },
   actionBtn: {
     width: 36,
@@ -447,6 +504,8 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'center'
   },
   card: {
+    position: 'relative',
+    zIndex: 2,
     padding: 16,
     borderRadius: 22,
     background: '#FFFFFF',
@@ -537,11 +596,22 @@ const styles: Record<string, React.CSSProperties> = {
     color: TEXT_MUTED,
     margin: '2px 0 0 0'
   },
-  reading: {
+  /* Pillola Data di Lettura iOS Style */
+  readingPillWrapper: {
+    display: 'flex',
+    marginTop: 4
+  },
+  readingPill: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 5,
     fontSize: 12,
-    color: TEXT_MAIN,
     fontWeight: 600,
-    margin: '2px 0 0 0'
+    color: TEXT_MAIN,
+    background: '#F2F2F7',
+    padding: '4px 10px',
+    borderRadius: 12,
+    boxShadow: 'inset 1.5px 1.5px 4px #D8DBE0, inset -1.5px -1.5px 4px #FFFFFF'
   },
   modalOverlay: {
     position: 'fixed',
@@ -570,4 +640,4 @@ const styles: Record<string, React.CSSProperties> = {
     color: TEXT_MUTED,
     marginTop: 8
   }
-} 
+}
