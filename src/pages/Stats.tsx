@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { db } from '../db/database'
 
 type Book = {
@@ -32,63 +32,230 @@ export default function Stats() {
     setBooks(data)
   }
 
-  const readBooks = books.filter((b) => b.readingYear)
+  const readBooks = useMemo(() => books.filter((b) => b.readingYear), [books])
 
   const totalBooks = readBooks.length
 
-  const totalPages = readBooks.reduce(
-    (sum, b) => sum + (b.pages || 0),
-    0
-  )
+  const totalPages = useMemo(() => {
+    return readBooks.reduce((sum, b) => sum + (b.pages || 0), 0)
+  }, [readBooks])
 
-  const classicBooks = readBooks.filter((b) => b.classic === true)
+  const classicBooks = useMemo(() => {
+    return readBooks.filter((b) => b.classic === true)
+  }, [readBooks])
 
-  const uniqueAuthors = new Set(readBooks.map((b) => b.author)).size
+  const uniqueAuthors = useMemo(() => {
+    return new Set(readBooks.map((b) => b.author)).size
+  }, [readBooks])
 
-  const evolutionBase = Object.entries(
-    readBooks.reduce(
-      (acc: Record<number, { books: number; pages: number; classics: number }>, b) => {
-        if (!b.readingYear) return acc
+  const uniqueGenres = useMemo(() => {
+    return new Set(readBooks.map((b) => b.genre).filter(Boolean)).size
+  }, [readBooks])
 
-        if (!acc[b.readingYear]) {
-          acc[b.readingYear] = { books: 0, pages: 0, classics: 0 }
-        }
+  const uniqueCountries = useMemo(() => {
+    return new Set(readBooks.map((b) => b.country).filter(Boolean)).size
+  }, [readBooks])
 
-        acc[b.readingYear].books += 1
-        acc[b.readingYear].pages += b.pages || 0
-        if (b.classic) acc[b.readingYear].classics += 1
+  /* ⭐ MOTORE DI ANALISI E DIAGNOSI DEL LETTORE */
+  const profileAnalysis = useMemo(() => {
+    if (totalBooks === 0) {
+      return {
+        archetype: {
+          title: 'Lettore in Divenire',
+          desc: 'Aggiungi i tuoi primi libri per sbloccare l’analisi approfondita della tua mente letteraria.',
+          icon: '🌱',
+          badge: 'Nuovo Profilo'
+        },
+        insights: []
+      }
+    }
 
-        return acc
-      },
-      {}
-    )
-  ).sort((a, b) => Number(a[0]) - Number(b[0]))
+    // Calcoli comportamentali
+    const seriesCount = readBooks.filter(
+      (b) => b.series && b.series.trim().length > 0
+    ).length
+    const seriesRatio = Math.round((seriesCount / totalBooks) * 100)
+
+    const genreCounts: Record<string, number> = {}
+    readBooks.forEach((b) => {
+      if (b.genre) genreCounts[b.genre] = (genreCounts[b.genre] || 0) + 1
+    })
+    const sortedGenres = Object.entries(genreCounts).sort((a, b) => b[1] - a[1])
+    const topGenre = sortedGenres[0]?.[0] || 'Non specificato'
+    const topGenrePct = sortedGenres[0]
+      ? Math.round((sortedGenres[0][1] / totalBooks) * 100)
+      : 0
+
+    const authorCounts: Record<string, number> = {}
+    readBooks.forEach((b) => {
+      authorCounts[b.author] = (authorCounts[b.author] || 0) + 1
+    })
+    const repeatBooksCount = readBooks.filter(
+      (b) => authorCounts[b.author] > 1
+    ).length
+    const repeatRatio = Math.round((repeatBooksCount / totalBooks) * 100)
+
+    const foreignCount = readBooks.filter(
+      (b) => b.country && b.country.trim().toLowerCase() !== 'italia'
+    ).length
+    const foreignRatio = Math.round((foreignCount / totalBooks) * 100)
+
+    const classicRatio = Math.round((classicBooks.length / totalBooks) * 100)
+
+    // 1. Definizione dell'Archetipo Guida
+    let archetype = {
+      title: 'Devoto delle Storie',
+      desc: 'Un lettore guidato dalla pura curiosità e dal piacere del racconto.',
+      icon: '📖',
+      badge: 'Equilibrato'
+    }
+
+    if (classicRatio >= 35) {
+      archetype = {
+        title: 'Custode del Canone',
+        desc: 'Prediligi opere che hanno superato la prova del tempo e lasciano un’impronta duratura.',
+        icon: '🏛️',
+        badge: 'Classico'
+      }
+    } else if (uniqueCountries >= 5 || foreignRatio >= 60) {
+      archetype = {
+        title: 'Esploratore Cosmopolita',
+        desc: 'Usi la letteratura come passaporto per esplorare culture e prospettive lontane.',
+        icon: '🌍',
+        badge: 'Internazionale'
+      }
+    } else if (seriesRatio >= 40) {
+      archetype = {
+        title: 'Architetto di Saghe',
+        desc: 'Ami immergerti in universi complessi e seguire la crescita dei personaggi nel tempo.',
+        icon: '🏰',
+        badge: 'Seriale'
+      }
+    } else if (uniqueGenres >= 5 && topGenrePct < 30) {
+      archetype = {
+        title: 'Eclettico Digitale',
+        desc: 'Non ti lasci ingabbiare nei generi: saltelli tra stili e forme narrative opposte.',
+        icon: '🎭',
+        badge: 'Variegato'
+      }
+    }
+
+    // 2. Generazione delle Osservazioni Qualitative
+    const insights = []
+
+    // Osservazione A: Focus vs Varietà dei Generi
+    if (topGenrePct >= 35) {
+      insights.push({
+        tag: 'Centro di Gravità',
+        icon: '🎯',
+        title: `Dominanza del genere "${topGenre}"`,
+        text: `Il ${topGenrePct}% della tua libreria appartiene a questo genere. Hai un baricentro narrativo forte a cui ami ritornare periodicamente per ricaricarti.`
+      })
+    } else {
+      insights.push({
+        tag: 'Varietà Narrativa',
+        icon: '🔀',
+        title: 'Gusto eclettico e bilanciato',
+        text: `Nessun genere supera il 30% del totale. Distribuisci le tue letture su uno spettro ampio senza creare monopoli concettuali.`
+      })
+    }
+
+    // Osservazione B: Struttura delle Letture (Saghe vs Autori vs Standalone)
+    if (seriesRatio >= 30) {
+      insights.push({
+        tag: 'Continuità Narrative',
+        icon: '📚',
+        title: 'Attrazione per gli universi espansi',
+        text: `Circa il ${seriesRatio}% dei tuoi libri fa parte di una serie. Mostri una forte propensione a seguire percorsi narrativi a lungo termine.`
+      })
+    } else if (repeatRatio >= 25) {
+      insights.push({
+        tag: 'Fidelizzazione',
+        icon: '✍️',
+        title: 'Esplorazione profonda degli autori',
+        text: `Il ${repeatRatio}% delle tue letture appartiene ad autori già letti. Quando trovi una voce affine, preferisci scavare nella sua produzione intera.`
+      })
+    } else {
+      insights.push({
+        tag: 'Sperimentazione',
+        icon: '✨',
+        title: 'Ricerca costante di voci nuove',
+        text: 'Prediligi storie autoconclusive e rinnovi quasi sempre l’autore. La tua priorità è scoprire punti di vista sempre differenti.'
+      })
+    }
+
+    // Osservazione C: Orizzonte temporale o geografico
+    if (classicRatio >= 25) {
+      insights.push({
+        tag: 'Profondità Temporale',
+        icon: '⏳',
+        title: 'Ancoraggio ai classici',
+        text: `Il ${classicRatio}% delle tue letture appartiene al canone dei classici. Alterni il ritmo contemporaneo con opere di rilevanza storica.`
+      })
+    } else if (foreignRatio >= 40) {
+      insights.push({
+        tag: 'Geografia Narrativa',
+        icon: '🗺️',
+        title: 'Sguardo oltre confine',
+        text: `Il ${foreignRatio}% delle tue letture proviene dall'estero. Cerchi attivamente ambientazioni e sensibilità culturali internazionali.`
+      })
+    } else {
+      insights.push({
+        tag: 'Contemporaneità',
+        icon: '💡',
+        title: 'Sintonia con il presente',
+        text: 'La tua selezione è fortemente ancorata alla narrativa contemporanea, riflettendo le sensibilità e i temi del mondo attuale.'
+      })
+    }
+
+    return { archetype, insights }
+  }, [readBooks, totalBooks, classicBooks, uniqueCountries, uniqueGenres])
+
+  const evolutionBase = useMemo(() => {
+    return Object.entries(
+      readBooks.reduce(
+        (acc: Record<number, { books: number; pages: number; classics: number }>, b) => {
+          if (!b.readingYear) return acc
+
+          if (!acc[b.readingYear]) {
+            acc[b.readingYear] = { books: 0, pages: 0, classics: 0 }
+          }
+
+          acc[b.readingYear].books += 1
+          acc[b.readingYear].pages += b.pages || 0
+          if (b.classic) acc[b.readingYear].classics += 1
+
+          return acc
+        },
+        {}
+      )
+    ).sort((a, b) => Number(a[0]) - Number(b[0]))
+  }, [readBooks])
 
   /* ⭐ NUOVI AUTORI PER ANNO */
-  const allSorted = [...readBooks].sort(
-    (a, b) => (a.readingYear || 0) - (b.readingYear || 0)
-  )
+  const newAuthorsByYear = useMemo(() => {
+    const allSorted = [...readBooks].sort(
+      (a, b) => (a.readingYear || 0) - (b.readingYear || 0)
+    )
+    const seenAuthors = new Set<string>()
+    const res: Record<number, number> = {}
 
-  const seenAuthors = new Set<string>()
-  const newAuthorsByYear: Record<number, number> = {}
-
-  allSorted.forEach((b) => {
-    if (!b.readingYear) return
-
-    if (!seenAuthors.has(b.author)) {
-      seenAuthors.add(b.author)
-
-      newAuthorsByYear[b.readingYear] =
-        (newAuthorsByYear[b.readingYear] || 0) + 1
-    }
-  })
+    allSorted.forEach((b) => {
+      if (!b.readingYear) return
+      if (!seenAuthors.has(b.author)) {
+        seenAuthors.add(b.author)
+        res[b.readingYear] = (res[b.readingYear] || 0) + 1
+      }
+    })
+    return res
+  }, [readBooks])
 
   const maxValue = Math.max(
-    ...evolutionBase.map(([_, d]) => {
+    ...evolutionBase.map(([year, d]) => {
       if (chartMode === 'books') return d.books
       if (chartMode === 'pages') return d.pages
       if (chartMode === 'classics') return d.classics
-      return newAuthorsByYear[Number(_)] || 0
+      return newAuthorsByYear[Number(year)] || 0
     }),
     1
   )
@@ -114,6 +281,58 @@ export default function Stats() {
         <MetricCard title="Pagine lette" value={totalPages} icon="📄" />
         <MetricCard title="Autori letti" value={uniqueAuthors} icon="✍️" />
         <MetricCard title="Classici" value={classicBooks.length} icon="🏛️" />
+      </div>
+
+      {/* ⭐ CARTA PROFILO & ANALISI QUALITATIVA */}
+      <div style={styles.dnaCard}>
+        <div style={styles.dnaHeader}>
+          <span style={styles.dnaBadge}>
+            {profileAnalysis.archetype.badge}
+          </span>
+          <span style={styles.dnaSub}>Analisi del Lettore</span>
+        </div>
+
+        {/* HERO PROFILO */}
+        <div style={styles.dnaBody}>
+          <div style={styles.dnaIconBox}>
+            {profileAnalysis.archetype.icon}
+          </div>
+          <div style={styles.dnaTextGroup}>
+            <h4 style={styles.dnaTitle}>
+              {profileAnalysis.archetype.title}
+            </h4>
+            <p style={styles.dnaDesc}>
+              {profileAnalysis.archetype.desc}
+            </p>
+          </div>
+        </div>
+
+        {/* SEPARATORE DELICATO */}
+        {profileAnalysis.insights.length > 0 && (
+          <div style={styles.divider} />
+        )}
+
+        {/* SEZIONE ANALISI COMPORTAMENTALE */}
+        {profileAnalysis.insights.length > 0 && (
+          <div style={styles.analysisContainer}>
+            <p style={styles.analysisSectionTitle}>
+              OSSERVAZIONI SULLE TUE LETTURE
+            </p>
+
+            <div style={styles.analysisList}>
+              {profileAnalysis.insights.map((item, idx) => (
+                <div key={idx} style={styles.analysisCard}>
+                  <div style={styles.analysisCardHeader}>
+                    <span style={styles.analysisIcon}>{item.icon}</span>
+                    <span style={styles.analysisTag}>{item.tag}</span>
+                  </div>
+                  <h5 style={styles.analysisTitle}>{item.title}</h5>
+                  <p style={styles.analysisText}>{item.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* EVOLUZIONE / GRAFICO */}
@@ -284,6 +503,150 @@ const styles: Record<string, React.CSSProperties> = {
     color: TEXT_MAIN,
     margin: 0,
     letterSpacing: '-0.5px'
+  },
+
+  /* ⭐ CARD PROFILO & ANALISI QUALITATIVA */
+  dnaCard: {
+    padding: '20px',
+    borderRadius: '24px',
+    background: 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
+    boxShadow: '6px 6px 16px #D8DBE0, -6px -6px 16px #FFFFFF',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+    border: '1px solid rgba(255, 255, 255, 0.8)'
+  },
+
+  dnaHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+
+  dnaBadge: {
+    padding: '4px 10px',
+    borderRadius: '12px',
+    background: 'rgba(0, 122, 255, 0.1)',
+    color: ACCENT_BLUE,
+    fontSize: '11px',
+    fontWeight: 700,
+    letterSpacing: '0.3px',
+    textTransform: 'uppercase'
+  },
+
+  dnaSub: {
+    fontSize: '12px',
+    fontWeight: 600,
+    color: TEXT_MUTED
+  },
+
+  dnaBody: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '14px'
+  },
+
+  dnaIconBox: {
+    width: '54px',
+    height: '54px',
+    borderRadius: '18px',
+    background: '#FFFFFF',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '28px',
+    flexShrink: 0,
+    boxShadow: '4px 4px 10px #D8DBE0, -4px -4px 10px #FFFFFF'
+  },
+
+  dnaTextGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '3px'
+  },
+
+  dnaTitle: {
+    fontSize: '18px',
+    fontWeight: 700,
+    color: TEXT_MAIN,
+    margin: 0,
+    letterSpacing: '-0.3px'
+  },
+
+  dnaDesc: {
+    fontSize: '12px',
+    color: TEXT_MUTED,
+    margin: 0,
+    lineHeight: '1.4',
+    fontWeight: 400
+  },
+
+  divider: {
+    height: '1px',
+    background: '#E5E5EA',
+    margin: '2px 0'
+  },
+
+  analysisContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px'
+  },
+
+  analysisSectionTitle: {
+    fontSize: '10px',
+    fontWeight: 700,
+    color: TEXT_MUTED,
+    letterSpacing: '0.6px',
+    margin: 0
+  },
+
+  analysisList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px'
+  },
+
+  analysisCard: {
+    padding: '12px 14px',
+    borderRadius: '16px',
+    background: '#F2F2F7',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+    boxShadow: 'inset 1.5px 1.5px 3px #D8DBE0, inset -1.5px -1.5px 3px #FFFFFF'
+  },
+
+  analysisCardHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px'
+  },
+
+  analysisIcon: {
+    fontSize: '14px'
+  },
+
+  analysisTag: {
+    fontSize: '10px',
+    fontWeight: 700,
+    color: ACCENT_BLUE,
+    textTransform: 'uppercase',
+    letterSpacing: '0.4px'
+  },
+
+  analysisTitle: {
+    fontSize: '13px',
+    fontWeight: 700,
+    color: TEXT_MAIN,
+    margin: 0
+  },
+
+  analysisText: {
+    fontSize: '11px',
+    color: TEXT_MUTED,
+    margin: 0,
+    lineHeight: '1.35'
   },
 
   sectionCard: {

@@ -529,7 +529,7 @@ export default function Explore() {
                       style={{
                         ...styles.progressBar,
                         width: `${pct}%`,
-                        background: isMax ? '#FF9500' : '#007AFF'
+                        background: isMax ? '#007AFF' : 'rgba(0, 122, 255, 0.25)'
                       }}
                     />
                   </div>
@@ -588,7 +588,7 @@ export default function Explore() {
                       style={{
                         ...styles.progressBar,
                         width: `${pct}%`,
-                        background: isMax ? '#FF9500' : '#007AFF'
+                        background: isMax ? '#007AFF' : 'rgba(0, 122, 255, 0.25)'
                       }}
                     />
                   </div>
@@ -662,7 +662,7 @@ export default function Explore() {
                       style={{
                         ...styles.progressBar,
                         width: `${pct}%`,
-                        background: isMax ? '#FF9500' : '#007AFF'
+                        background: isMax ? '#007AFF' : 'rgba(0, 122, 255, 0.25)'
                       }}
                     />
                   </div>
@@ -713,7 +713,7 @@ export default function Explore() {
                       style={{
                         ...styles.progressBar,
                         width: `${pct}%`,
-                        background: isMax ? '#FF9500' : '#007AFF'
+                        background: isMax ? '#007AFF' : 'rgba(0, 122, 255, 0.25)'
                       }}
                     />
                   </div>
@@ -1065,7 +1065,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   progressBar: {
     height: '100%',
-    borderRadius: 3
+    borderRadius: 3,
+    transition: 'width 0.4s ease, background 0.2s ease'
   },
   periodLabel: {
     display: 'flex',
