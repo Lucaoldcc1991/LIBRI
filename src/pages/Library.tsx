@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { db } from '../db/database'
 import BookForm from '../components/BookForm'
-import { COUNTRIES } from '../utils/countries'
 
 type Book = {
   id?: number
@@ -21,15 +20,51 @@ type Book = {
 }
 
 const MONTHS = [
-  'Gennaio','Febbraio','Marzo','Aprile',
-  'Maggio','Giugno','Luglio','Agosto',
-  'Settembre','Ottobre','Novembre','Dicembre'
+  'Gen', 'Feb', 'Mar', 'Apr',
+  'Mag', 'Giu', 'Lug', 'Ago',
+  'Set', 'Ott', 'Nov', 'Dic'
 ]
 
-/* ================= iOS WHITE 3D PALETTE ================= */
-const TEXT_MAIN = '#1C1C1E'
-const TEXT_MUTED = '#8E8E93'
-const TEXT_LIGHT = '#636366'
+const COUNTRY_FLAGS: Record<string, string> = {
+  Italia: '🇮🇹',
+  'Stati Uniti': '🇺🇸',
+  'Regno Unito': '🇬🇧',
+  Francia: '🇫🇷',
+  Germania: '🇩🇪',
+  Spagna: '🇪🇸',
+  Giappone: '🇯🇵',
+  Cina: '🇨🇳',
+  Russia: '🇷🇺',
+  India: '🇮🇳',
+  Canada: '🇨🇦',
+  Australia: '🇦🇺',
+  Brasile: '🇧🇷',
+  Argentina: '🇦🇷',
+  Messico: '🇲🇽',
+  Svezia: '🇸🇪',
+  Norvegia: '🇳🇴',
+  Irlanda: '🇮🇪',
+  Polonia: '🇵🇱',
+  Portogallo: '🇵🇹',
+  Grecia: '🇬🇷',
+  Olanda: '🇳🇱',
+  Austria: '🇦🇹',
+  Svizzera: '🇨🇭',
+  Impero: '🏛️',
+  'Impero Romano': '🏛️',
+  'Impero Ottomano': '🇹🇷'
+}
+
+function getCountryFlag(country?: string) {
+  if (!country) return ''
+  const trimmed = country.trim().toLowerCase()
+  
+  const key = Object.keys(COUNTRY_FLAGS).find(
+    (k) => k.toLowerCase() === trimmed
+  )
+
+  return key ? `${COUNTRY_FLAGS[key]} ` : '🌐 '
+}
 
 export default function Library() {
   const [books, setBooks] = useState<Book[]>([])
@@ -37,8 +72,8 @@ export default function Library() {
   const [editingBook, setEditingBook] = useState<Book | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [yearFilter, setYearFilter] = useState<number | 'all'>('all')
-
   const [openSwipeId, setOpenSwipeId] = useState<number | null>(null)
+  const [activeOffset, setActiveOffset] = useState<{ id: number; offset: number } | null>(null)
 
   useEffect(() => {
     loadBooks()
@@ -46,29 +81,24 @@ export default function Library() {
 
   const loadBooks = async () => {
     const data = await db.books.toArray()
-
     const sorted = data.sort((a, b) => {
       const aScore = (a.readingYear ?? 0) * 100 + (a.readingMonth ?? 0)
       const bScore = (b.readingYear ?? 0) * 100 + (b.readingMonth ?? 0)
-
       if (bScore !== aScore) return bScore - aScore
       return (b.createdAt ?? 0) - (a.createdAt ?? 0)
     })
-
     setBooks(sorted)
   }
 
-  // Funzione corretta per spostare i libri su e giù nell'elenco
   const moveBook = async (filteredIndex: number, direction: 'up' | 'down') => {
     const targetFilteredIndex = direction === 'up' ? filteredIndex - 1 : filteredIndex + 1
     if (targetFilteredIndex < 0 || targetFilteredIndex >= filteredBooks.length) return
 
-    const currentBook = filteredBooks[filteredIndex]
-    const targetBook = filteredBooks[targetFilteredIndex]
+    const currentBook = { ...filteredBooks[filteredIndex] }
+    const targetBook = { ...filteredBooks[targetFilteredIndex] }
 
     if (!currentBook.id || !targetBook.id) return
 
-    // 1. Scambiamo le date di lettura se differiscono
     const tempYear = currentBook.readingYear
     const tempMonth = currentBook.readingMonth
     currentBook.readingYear = targetBook.readingYear
@@ -76,7 +106,6 @@ export default function Library() {
     targetBook.readingYear = tempYear
     targetBook.readingMonth = tempMonth
 
-    // 2. Scambiamo createdAt (e garantiamo che siano distinti)
     let tempCreated = currentBook.createdAt ?? Date.now()
     let targetCreated = targetBook.createdAt ?? (Date.now() - 1000)
 
@@ -88,7 +117,6 @@ export default function Library() {
     currentBook.createdAt = targetCreated
     targetBook.createdAt = tempCreated
 
-    // 3. Aggiorniamo il database Dexie
     await db.books.update(currentBook.id, {
       readingYear: currentBook.readingYear,
       readingMonth: currentBook.readingMonth,
@@ -100,27 +128,22 @@ export default function Library() {
       createdAt: targetBook.createdAt
     })
 
-    // 4. Ricarichiamo la lista ordinata
     await loadBooks()
   }
 
-  const years = [...new Set(
-    books.map(b => b.readingYear).filter(Boolean)
-  )]
+  const years = [...new Set(books.map((b) => b.readingYear).filter(Boolean))] as number[]
 
   const filteredBooks = books.filter((b) => {
     const q = search.toLowerCase()
-
     const matchesSearch =
-      b.title.toLowerCase().includes(q) ||
-      b.author.toLowerCase().includes(q) ||
-      b.genre.toLowerCase().includes(q) ||
+      (b.title || '').toLowerCase().includes(q) ||
+      (b.author || '').toLowerCase().includes(q) ||
+      (b.genre || '').toLowerCase().includes(q) ||
       (b.series || '').toLowerCase().includes(q) ||
-      (b.tags || []).some(t => t.toLowerCase().includes(q))
+      (b.country || '').toLowerCase().includes(q) ||
+      (b.tags || []).some((t) => t.toLowerCase().includes(q))
 
-    const matchesYear =
-      yearFilter === 'all' || b.readingYear === yearFilter
-
+    const matchesYear = yearFilter === 'all' || b.readingYear === yearFilter
     return matchesSearch && matchesYear
   })
 
@@ -137,74 +160,72 @@ export default function Library() {
   const deleteBook = async (id?: number) => {
     if (!id) return
     if (!confirm('Eliminare questo libro?')) return
-
     await db.books.delete(id)
     loadBooks()
   }
 
-  const swipeState = useRef<Record<number, {
-    startX: number
-    startY: number
-    offset: number
-    swiping: boolean
-  }>>({})
+  // Touch Swipe
+  const touchStartRef = useRef<{ id: number; startX: number; startY: number } | null>(null)
 
   const handleTouchStart = (e: React.TouchEvent, id?: number) => {
     if (!id) return
-    swipeState.current[id] = {
+    touchStartRef.current = {
+      id,
       startX: e.touches[0].clientX,
-      startY: e.touches[0].clientY,
-      offset: 0,
-      swiping: false
+      startY: e.touches[0].clientY
     }
   }
 
   const handleTouchMove = (e: React.TouchEvent, id?: number) => {
-    if (!id) return
-    const state = swipeState.current[id]
-    if (!state) return
+    if (!id || !touchStartRef.current || touchStartRef.current.id !== id) return
 
-    const deltaX = e.touches[0].clientX - state.startX
-    const deltaY = e.touches[0].clientY - state.startY
+    const deltaX = e.touches[0].clientX - touchStartRef.current.startX
+    const deltaY = e.touches[0].clientY - touchStartRef.current.startY
 
     if (Math.abs(deltaY) > Math.abs(deltaX)) return
-    if (!state.swiping && Math.abs(deltaX) < 25) return
 
-    state.swiping = true
-
-    if (deltaX < 0) {
-      state.offset = Math.max(deltaX, -160)
-    } else {
-      state.offset = 0
-    }
+    const baseOffset = openSwipeId === id ? -150 : 0
+    const newOffset = Math.min(0, Math.max(-160, baseOffset + deltaX))
+    setActiveOffset({ id, offset: newOffset })
   }
 
   const handleTouchEnd = (id?: number) => {
-    if (!id) return
-    const state = swipeState.current[id]
-    if (!state) return
+    if (!id || !touchStartRef.current) return
 
-    if (state.offset < -90) {
-      setOpenSwipeId(id)
-    } else {
-      setOpenSwipeId(null)
+    if (activeOffset && activeOffset.id === id) {
+      if (activeOffset.offset < -75) {
+        setOpenSwipeId(id)
+      } else {
+        setOpenSwipeId(null)
+      }
     }
-    delete swipeState.current[id]
+    setActiveOffset(null)
+    touchStartRef.current = null
   }
 
-  const getOffset = (id?: number) => {
+  const getCardOffset = (id?: number) => {
     if (!id) return 0
-    return openSwipeId === id ? -160 : 0
+    if (activeOffset && activeOffset.id === id) return activeOffset.offset
+    return openSwipeId === id ? -150 : 0
   }
 
   return (
     <div style={styles.container}>
-      <h2 style={styles.header}>📚 Libreria</h2>
-      <p style={styles.eyebrow}>{filteredBooks.length} libri in lista</p>
+      {/* Header Minimalista */}
+      <header style={styles.header}>
+        <div>
+          <h1 style={styles.title}>Libreria</h1>
+          <span style={styles.subtitle}>{filteredBooks.length} titoli</span>
+        </div>
+        <button onClick={openAdd} style={styles.addIconBtn} title="Aggiungi libro">
+          ＋
+        </button>
+      </header>
 
+      {/* Bar dei filtri essenziale */}
       <div style={styles.filterRow}>
         <input
-          placeholder="Cerca per titolo, autore, genere..."
+          placeholder="Cerca..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           style={styles.search}
@@ -213,15 +234,11 @@ export default function Library() {
         <select
           value={yearFilter}
           onChange={(e) =>
-            setYearFilter(
-              e.target.value === 'all'
-                ? 'all'
-                : Number(e.target.value)
-            )
+            setYearFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))
           }
           style={styles.select}
         >
-          <option value="all">Tutti gli anni</option>
+          <option value="all">Anni</option>
           {years.map((y) => (
             <option key={y} value={y}>
               {y}
@@ -230,10 +247,7 @@ export default function Library() {
         </select>
       </div>
 
-      <button onClick={openAdd} style={styles.addBtn}>
-        + Aggiungi nuovo libro
-      </button>
-
+      {/* Form Modale */}
       {showForm && (
         <div style={styles.modalOverlay}>
           <BookForm
@@ -247,49 +261,37 @@ export default function Library() {
         </div>
       )}
 
-      {/* Lista Libri */}
+      {/* Lista Libri Minimal */}
       <div style={styles.list}>
         {filteredBooks.map((book, index) => {
-          const country = COUNTRIES.find((c) => c.name === book.country)
           const monthName = book.readingMonth ? MONTHS[book.readingMonth - 1] : null
+          const isFirst = index === 0
+          const isLast = index === filteredBooks.length - 1
+          const readingDateStr = [monthName, book.readingYear].filter(Boolean).join(' ')
 
           return (
             <div key={book.id} style={styles.swipeWrapper}>
-              {/* Pulsanti Azioni e Spostamento nascosti dietro lo swipe */}
+              {/* Azioni Swipe Nascoste */}
               <div style={styles.actionsBehind}>
                 <button
-                  style={{
-                    ...styles.actionBtn,
-                    opacity: index === 0 ? 0.3 : 1,
-                    cursor: index === 0 ? 'not-allowed' : 'pointer'
-                  }}
+                  style={{ ...styles.actionBtn, opacity: isFirst ? 0.3 : 1 }}
                   onClick={(e) => {
                     e.stopPropagation()
                     moveBook(index, 'up')
                   }}
-                  onTouchStart={(e) => e.stopPropagation()}
-                  onTouchEnd={(e) => e.stopPropagation()}
-                  disabled={index === 0}
-                  title="Sposta Su"
+                  disabled={isFirst}
                 >
-                  ⬆️
+                  ↑
                 </button>
                 <button
-                  style={{
-                    ...styles.actionBtn,
-                    opacity: index === filteredBooks.length - 1 ? 0.3 : 1,
-                    cursor: index === filteredBooks.length - 1 ? 'not-allowed' : 'pointer'
-                  }}
+                  style={{ ...styles.actionBtn, opacity: isLast ? 0.3 : 1 }}
                   onClick={(e) => {
                     e.stopPropagation()
                     moveBook(index, 'down')
                   }}
-                  onTouchStart={(e) => e.stopPropagation()}
-                  onTouchEnd={(e) => e.stopPropagation()}
-                  disabled={index === filteredBooks.length - 1}
-                  title="Sposta Giù"
+                  disabled={isLast}
                 >
-                  ⬇️
+                  ↓
                 </button>
                 <button
                   style={styles.actionBtn}
@@ -297,91 +299,68 @@ export default function Library() {
                     e.stopPropagation()
                     openEdit(book)
                   }}
-                  onTouchStart={(e) => e.stopPropagation()}
-                  onTouchEnd={(e) => e.stopPropagation()}
                 >
-                  ✏️
+                  ✎
                 </button>
                 <button
-                  style={styles.actionBtn}
+                  style={{ ...styles.actionBtn, color: '#FF3B30' }}
                   onClick={(e) => {
                     e.stopPropagation()
                     deleteBook(book.id)
                   }}
-                  onTouchStart={(e) => e.stopPropagation()}
-                  onTouchEnd={(e) => e.stopPropagation()}
                 >
-                  🗑️
+                  ✕
                 </button>
               </div>
 
-              {/* Card Principale */}
+              {/* Card libro */}
               <div
                 style={{
                   ...styles.card,
-                  transform: `translateX(${getOffset(book.id)}px)`
+                  transform: `translateX(${getCardOffset(book.id)}px)`
                 }}
                 onTouchStart={(e) => handleTouchStart(e, book.id)}
                 onTouchMove={(e) => handleTouchMove(e, book.id)}
                 onTouchEnd={() => handleTouchEnd(book.id)}
-                onClick={() => setOpenSwipeId(null)}
+                onClick={() => {
+                  if (openSwipeId === book.id) {
+                    setOpenSwipeId(null)
+                  } else {
+                    openEdit(book)
+                  }
+                }}
               >
-                <div style={styles.cardRow}>
-                  {book.cover ? (
-                    <img
-                      src={book.cover}
-                      alt={book.title}
-                      style={styles.cover}
-                    />
-                  ) : (
-                    <div style={styles.coverPlaceholder}>
-                      📖
-                    </div>
-                  )}
+                {book.cover ? (
+                  <img src={book.cover} alt="" style={styles.cover} />
+                ) : (
+                  <div style={styles.coverPlaceholder} />
+                )}
 
-                  <div style={styles.info}>
-                    <div style={styles.titleRow}>
-                      <h4 style={styles.titleBook}>{book.title}</h4>
-                      {book.classic && (
-                        <span style={styles.classicBadge} title="Classico">🏛️</span>
-                      )}
-                    </div>
+                <div style={styles.details}>
+                  <div style={styles.titleRow}>
+                    <h3 style={styles.bookTitle}>{book.title}</h3>
+                    {book.classic && <span style={styles.classicTag}>Classico</span>}
+                  </div>
 
-                    <p style={styles.author}>{book.author}</p>
+                  <p style={styles.author}>{book.author}</p>
 
-                    {book.genre && (
-                      <div style={styles.genrePillWrapper}>
-                        <span style={styles.genrePill}>{book.genre}</span>
-                      </div>
-                    )}
-
-                    <div style={styles.metaRow}>
-                      {country && (
-                        <span>{country.flag} {country.name}</span>
-                      )}
-                      {country && <span>•</span>}
-                      <span>{book.pages} pagine</span>
-                      {book.publicationYear && (
-                        <>
-                          <span>•</span>
-                          <span>{book.publicationYear}</span>
-                        </>
-                      )}
-                    </div>
-
-                    {book.series && (
-                      <p style={styles.series}>📖 {book.series}</p>
-                    )}
-
-                    {/* Data di Lettura - Pillola stile iOS App con testo Nero */}
-                    {(monthName || book.readingYear) && (
-                      <div style={styles.readingPillWrapper}>
-                        <span style={styles.readingPill}>
-                          📅 {[monthName, book.readingYear].filter(Boolean).join(' ')}
-                        </span>
-                      </div>
+                  <div style={styles.metaRow}>
+                    {book.genre && <span>{book.genre}</span>}
+                    {book.publicationYear && <span>• {book.publicationYear}</span>}
+                    {book.pages > 0 && <span>• {book.pages} p.</span>}
+                    {book.country && (
+                      <span>
+                        • {getCountryFlag(book.country)}
+                        {book.country}
+                      </span>
                     )}
                   </div>
+
+                  {readingDateStr && (
+                    <div style={styles.readingDateRow}>
+                      📅 {readingDateStr}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -390,7 +369,6 @@ export default function Library() {
 
         {filteredBooks.length === 0 && (
           <div style={styles.emptyState}>
-            <p style={styles.emptyIcon}>📚</p>
             <p style={styles.emptyText}>Nessun libro trovato.</p>
           </div>
         )}
@@ -399,81 +377,86 @@ export default function Library() {
   )
 }
 
-/* ================= STILI iOS WHITE 3D ================= */
+/* ================= STILI MINIMALISTI ================= */
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 14,
+    padding: '24px 16px 100px',
     background: '#F2F2F7',
-    padding: '16px 16px 110px',
     minHeight: '100vh',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
     boxSizing: 'border-box'
   },
   header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16
+  },
+  title: {
     fontSize: 28,
     fontWeight: 700,
-    color: TEXT_MAIN,
+    color: '#1C1C1E',
     margin: 0,
     letterSpacing: '-0.5px'
   },
-  eyebrow: {
-    fontSize: 12,
-    fontWeight: 600,
-    color: TEXT_MUTED,
-    textTransform: 'uppercase',
-    letterSpacing: '1px',
-    margin: '-8px 0 0 0'
+  subtitle: {
+    fontSize: 13,
+    color: '#8E8E93',
+    fontWeight: 500
+  },
+  addIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    border: 'none',
+    background: '#FFFFFF',
+    color: '#1C1C1E',
+    fontSize: 18,
+    fontWeight: 400,
+    cursor: 'pointer',
+    boxShadow: '3px 3px 8px #D8DBE0, -3px -3px 8px #FFFFFF',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   filterRow: {
     display: 'flex',
-    gap: 10
+    gap: 10,
+    marginBottom: 16
   },
   search: {
     flex: 1,
-    padding: '12px 14px',
-    borderRadius: 14,
+    padding: '10px 14px',
+    borderRadius: 12,
     border: 'none',
     background: '#F2F2F7',
-    color: TEXT_MAIN,
     fontSize: 14,
-    fontWeight: 500,
+    color: '#1C1C1E',
     boxShadow: 'inset 2px 2px 5px #D8DBE0, inset -2px -2px 5px #FFFFFF',
-    outline: 'none'
+    outline: 'none',
+    boxSizing: 'border-box'
   },
   select: {
-    padding: '12px 14px',
-    borderRadius: 14,
+    padding: '10px 12px',
+    borderRadius: 12,
     border: 'none',
     background: '#F2F2F7',
-    color: TEXT_MAIN,
+    color: '#8E8E93',
     fontSize: 13,
     fontWeight: 600,
     boxShadow: 'inset 2px 2px 5px #D8DBE0, inset -2px -2px 5px #FFFFFF',
-    outline: 'none'
-  },
-  addBtn: {
-    padding: 14,
-    borderRadius: 16,
-    border: 'none',
-    background: '#FFFFFF',
-    color: TEXT_MAIN,
-    fontWeight: 700,
-    fontSize: 14,
-    cursor: 'pointer',
-    boxShadow: '6px 6px 14px #D8DBE0, -6px -6px 14px #FFFFFF',
-    transition: 'all 0.2s ease'
+    outline: 'none',
+    cursor: 'pointer'
   },
   list: {
     display: 'flex',
     flexDirection: 'column',
-    gap: 14
+    gap: 10
   },
   swipeWrapper: {
     position: 'relative',
-    borderRadius: 22,
+    borderRadius: 16,
     overflow: 'hidden'
   },
   actionsBehind: {
@@ -481,24 +464,25 @@ const styles: Record<string, React.CSSProperties> = {
     right: 0,
     top: 0,
     bottom: 0,
-    width: 160,
+    width: 150,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: 6,
     paddingRight: 6,
     background: '#F2F2F7',
     zIndex: 1
   },
   actionBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
+    width: 30,
+    height: 30,
+    borderRadius: 10,
     border: 'none',
     background: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 12,
+    fontWeight: 'bold',
     cursor: 'pointer',
-    boxShadow: '3px 3px 8px #D8DBE0, -3px -3px 8px #FFFFFF',
+    boxShadow: '2px 2px 5px #D8DBE0, -2px -2px 5px #FFFFFF',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center'
@@ -506,138 +490,105 @@ const styles: Record<string, React.CSSProperties> = {
   card: {
     position: 'relative',
     zIndex: 2,
-    padding: 16,
-    borderRadius: 22,
-    background: '#FFFFFF',
-    boxShadow: '8px 8px 18px #D8DBE0, -8px -8px 18px #FFFFFF',
-    transition: 'transform 0.2s ease',
-    touchAction: 'pan-y'
-  },
-  cardRow: {
     display: 'flex',
-    gap: 14,
-    alignItems: 'flex-start'
+    alignItems: 'center',
+    gap: 12,
+    padding: 10,
+    borderRadius: 16,
+    background: '#FFFFFF',
+    boxShadow: '4px 4px 12px #D8DBE0, -4px -4px 12px #FFFFFF',
+    transition: 'transform 0.15s ease-out',
+    touchAction: 'pan-y',
+    userSelect: 'none',
+    cursor: 'pointer'
   },
   cover: {
-    width: 65,
-    height: 95,
+    width: 42,
+    height: 62,
+    borderRadius: 6,
     objectFit: 'cover',
-    borderRadius: 12,
-    boxShadow: '3px 3px 8px rgba(0,0,0,0.12)',
     flexShrink: 0
   },
   coverPlaceholder: {
-    width: 65,
-    height: 95,
-    borderRadius: 12,
-    background: '#F2F2F7',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 26,
-    flexShrink: 0,
-    boxShadow: 'inset 2px 2px 5px #D8DBE0, inset -2px -2px 5px #FFFFFF'
+    width: 42,
+    height: 62,
+    borderRadius: 6,
+    background: '#E5E5EA',
+    flexShrink: 0
   },
-  info: {
+  details: {
     display: 'flex',
     flexDirection: 'column',
-    gap: 3,
-    flex: 1
+    gap: 2,
+    flex: 1,
+    overflow: 'hidden'
   },
   titleRow: {
     display: 'flex',
-    alignItems: 'center',
+    alignItems: 'baseline',
     justifyContent: 'space-between',
-    gap: 6
+    gap: 8
   },
-  titleBook: {
-    fontSize: 16,
-    fontWeight: 700,
-    color: TEXT_MAIN,
-    margin: 0,
-    letterSpacing: '-0.3px'
-  },
-  classicBadge: {
+  bookTitle: {
     fontSize: 14,
+    fontWeight: 600,
+    color: '#1C1C1E',
+    margin: 0,
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis'
+  },
+  classicTag: {
+    fontSize: '11px',
+    color: '#555555',
+    border: '1px solid #CCCCCC',
+    padding: '1px 5px',
+    borderRadius: '2px',
+    textTransform: 'uppercase',
     flexShrink: 0
   },
   author: {
-    fontSize: 13,
-    fontWeight: 600,
-    color: TEXT_MUTED,
-    margin: 0
-  },
-  genrePillWrapper: {
-    display: 'flex',
-    marginTop: 3,
-    marginBottom: 3
-  },
-  genrePill: {
-    fontSize: 11,
-    fontWeight: 700,
-    color: TEXT_MUTED,
-    background: '#F2F2F7',
-    padding: '3px 8px',
-    borderRadius: 8,
-    letterSpacing: '0.3px'
+    fontSize: 12,
+    color: '#8E8E93',
+    margin: 0,
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis'
   },
   metaRow: {
-    fontSize: 12,
-    color: TEXT_LIGHT,
-    fontWeight: 600,
+    fontSize: 11,
+    color: '#A1A1A6',
     display: 'flex',
+    gap: 4,
     alignItems: 'center',
-    gap: 5,
-    marginTop: 2
+    marginTop: 2,
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis'
   },
-  series: {
-    fontSize: 12,
-    fontStyle: 'italic',
-    color: TEXT_MUTED,
-    margin: '2px 0 0 0'
-  },
-  /* Pillola Data di Lettura iOS Style */
-  readingPillWrapper: {
-    display: 'flex',
-    marginTop: 4
-  },
-  readingPill: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 5,
-    fontSize: 12,
+  readingDateRow: {
+    fontSize: 11,
     fontWeight: 600,
-    color: TEXT_MAIN,
-    background: '#F2F2F7',
-    padding: '4px 10px',
-    borderRadius: 12,
-    boxShadow: 'inset 1.5px 1.5px 4px #D8DBE0, inset -1.5px -1.5px 4px #FFFFFF'
+    color: '#1C1C1E',
+    marginTop: 3
   },
   modalOverlay: {
     position: 'fixed',
     inset: 0,
     zIndex: 9999,
-    background: 'rgba(0, 0, 0, 0.3)',
+    background: 'rgba(0, 0, 0, 0.2)',
     backdropFilter: 'blur(4px)',
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center'
   },
   emptyState: {
-    padding: '40px 16px',
-    textAlign: 'center',
-    borderRadius: 22,
-    background: '#FFFFFF',
-    boxShadow: '8px 8px 18px #D8DBE0, -8px -8px 18px #FFFFFF'
-  },
-  emptyIcon: {
-    fontSize: 32,
-    margin: 0
+    padding: '30px 16px',
+    textAlign: 'center'
   },
   emptyText: {
-    fontSize: 14,
-    fontWeight: 600,
-    color: TEXT_MUTED,
-    marginTop: 8
+    fontSize: 13,
+    color: '#8E8E93',
+    margin: 0
   }
 }

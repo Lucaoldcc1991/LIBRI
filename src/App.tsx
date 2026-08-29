@@ -5,7 +5,6 @@ import Navbar from './components/Navbar'
 import Home from './pages/Home'
 import Library from './pages/Library'
 import Wishlist from './pages/Wishlist'
-import Stats from './pages/Stats'
 import Settings from './pages/Settings'
 import Explore from './pages/Explore'
 
@@ -41,7 +40,6 @@ export default function App() {
             <Route path="/library" element={<Library />} />
             <Route path="/explore" element={<Explore />} />
             <Route path="/wishlist" element={<Wishlist />} />
-            <Route path="/stats" element={<Stats />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </div>

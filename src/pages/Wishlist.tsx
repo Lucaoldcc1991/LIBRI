@@ -24,7 +24,6 @@ const genres = [
   'Distopico'
 ]
 
-/* ================= iOS WHITE 3D PALETTE ================= */
 const TEXT_MAIN = '#1C1C1E'
 const TEXT_MUTED = '#8E8E93'
 
@@ -35,7 +34,6 @@ export default function Wishlist() {
   const [genre, setGenre] = useState('')
   const [genreCustom, setGenreCustom] = useState('')
 
-  // Stati per la ricerca e i filtri a tendina
   const [search, setSearch] = useState('')
   const [selectedAuthorFilter, setSelectedAuthorFilter] = useState<string>('')
   const [selectedGenreFilter, setSelectedGenreFilter] = useState<string>('')
@@ -80,7 +78,6 @@ export default function Wishlist() {
     load()
   }
 
-  // Estrae gli autori unici presenti nella wishlist per popolarele opzioni della tendina
   const wishlistAuthors = useMemo(() => {
     const set = new Set<string>()
     items.forEach((i) => {
@@ -89,7 +86,6 @@ export default function Wishlist() {
     return Array.from(set).sort((a, b) => a.localeCompare(b))
   }, [items])
 
-  // Estrae i generi unici presenti nella wishlist per la tendina dei generi
   const wishlistGenres = useMemo(() => {
     const set = new Set<string>()
     items.forEach((i) => {
@@ -98,7 +94,6 @@ export default function Wishlist() {
     return Array.from(set).sort((a, b) => a.localeCompare(b))
   }, [items])
 
-  // Filtra i libri della wishlist
   const filtered = items.filter((i) => {
     const q = search.toLowerCase().trim()
     const matchText =
@@ -129,20 +124,13 @@ export default function Wishlist() {
 
   return (
     <div style={styles.container}>
-      {/* Header */}
-      <div style={styles.headerGroup}>
-        <h2 style={styles.header}>✨ La tua Wishlist</h2>
-        <p style={styles.eyebrow}>
-          {items.length === 0
-            ? 'Ancora nessun libro in lista'
-            : `${items.length} ${items.length === 1 ? 'libro in lista' : 'libri in lista'}`}
-        </p>
-      </div>
+      <header style={styles.header}>
+        <h1 style={styles.title}>Wishlist</h1>
+        <span style={styles.metaLine}>{items.length} libri in lista</span>
+      </header>
 
-      {/* FORM ORIGINALE */}
-      <div style={styles.formCard}>
-        <span style={styles.sectionLabel}>Aggiungi un desiderio</span>
-
+      {/* Form Aggiunta */}
+      <div style={styles.card3d}>
         <input
           placeholder="Titolo libro *"
           value={title}
@@ -160,7 +148,7 @@ export default function Wishlist() {
         <select
           value={genre}
           onChange={(e) => setGenre(e.target.value)}
-          style={styles.input}
+          style={styles.select}
         >
           <option value="">Seleziona genere *</option>
           {genres.map((g) => (
@@ -171,7 +159,7 @@ export default function Wishlist() {
         </select>
 
         <input
-          placeholder="Specifica o nota sul genere (es. Ambientato a Roma)..."
+          placeholder="Nota sul genere (es. Ambientato a Roma)..."
           value={genreCustom}
           onChange={(e) => setGenreCustom(e.target.value)}
           style={styles.input}
@@ -182,91 +170,83 @@ export default function Wishlist() {
           disabled={!isValid}
           style={{
             ...styles.addButton,
-            opacity: isValid ? 1 : 0.5,
+            opacity: isValid ? 1 : 0.4,
             cursor: isValid ? 'pointer' : 'not-allowed'
           }}
         >
-          + Aggiungi alla wishlist
+          Aggiungi alla wishlist
         </button>
       </div>
 
-      {/* SEZIONE DI RICERCA CON TENDINE STILE iOS */}
+      {/* Cerca & Filtri */}
       {items.length > 0 && (
-        <div style={styles.searchSectionCard}>
-          <span style={styles.sectionLabel}>Cerca & Filtra</span>
-
-          {/* Input testo libero */}
-          <input
-            placeholder="🔍 Cerca per titolo o parola chiave..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={styles.searchInput}
-          />
-
-          {/* Griglia Tendine Filtri */}
-          <div style={styles.selectGrid}>
-            {/* Tendina Autori */}
-            <div style={styles.selectWrapper}>
-              <select
-                value={selectedAuthorFilter}
-                onChange={(e) => setSelectedAuthorFilter(e.target.value)}
-                style={{
-                  ...styles.selectInput,
-                  color: selectedAuthorFilter ? TEXT_MAIN : TEXT_MUTED
-                }}
-              >
-                <option value="">👤 Tutti gli autori</option>
-                {wishlistAuthors.map((a) => (
-                  <option key={a} value={a}>
-                    {a}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Tendina Generi */}
-            <div style={styles.selectWrapper}>
-              <select
-                value={selectedGenreFilter}
-                onChange={(e) => setSelectedGenreFilter(e.target.value)}
-                style={{
-                  ...styles.selectInput,
-                  color: selectedGenreFilter ? TEXT_MAIN : TEXT_MUTED
-                }}
-              >
-                <option value="">🏷️ Tutti i generi</option>
-                {wishlistGenres.map((g) => (
-                  <option key={g} value={g}>
-                    {g}
-                  </option>
-                ))}
-              </select>
-            </div>
+        <div style={styles.searchContainer}>
+          <div style={styles.searchRow}>
+            <input
+              placeholder="Cerca per titolo o parola chiave..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={styles.searchInput}
+            />
+            {hasActiveFilters && (
+              <button onClick={resetFilters} style={styles.resetButton}>
+                Reset
+              </button>
+            )}
           </div>
 
-          {/* Reset Filtri */}
-          {hasActiveFilters && (
-            <button onClick={resetFilters} style={styles.resetButton}>
-              Mostra tutti i libri
-            </button>
-          )}
+          <div style={styles.selectGrid}>
+            <select
+              value={selectedAuthorFilter}
+              onChange={(e) => setSelectedAuthorFilter(e.target.value)}
+              style={{
+                ...styles.filterSelect,
+                color: selectedAuthorFilter ? TEXT_MAIN : TEXT_MUTED
+              }}
+            >
+              <option value="">Tutti gli autori</option>
+              {wishlistAuthors.map((a) => (
+                <option key={a} value={a}>
+                  {a}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={selectedGenreFilter}
+              onChange={(e) => setSelectedGenreFilter(e.target.value)}
+              style={{
+                ...styles.filterSelect,
+                color: selectedGenreFilter ? TEXT_MAIN : TEXT_MUTED
+              }}
+            >
+              <option value="">Tutti i generi</option>
+              {wishlistGenres.map((g) => (
+                <option key={g} value={g}>
+                  {g}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       )}
 
-      {/* LISTA LIBRI */}
-      <div style={styles.list}>
+      {/* Lista Libri */}
+      <div style={styles.stack}>
         {filtered.map((item) => (
-          <div key={item.id} style={styles.card}>
-            <div style={styles.info}>
-              <p style={styles.titleBook}>{item.title}</p>
-              <p style={styles.meta}>{item.author}</p>
-              <span style={styles.genreTag}>{item.genre}</span>
+          <div key={item.id} style={styles.rowCard}>
+            <div style={styles.details}>
+              <h3 style={styles.bookTitle}>{item.title}</h3>
+              <p style={styles.author}>{item.author}</p>
+              <div style={styles.metaRow}>
+                <span>{item.genre}</span>
+              </div>
             </div>
 
             <button
               onClick={() => removeItem(item.id)}
               style={styles.delete}
-              aria-label="Rimuovi dalla wishlist"
+              aria-label="Rimuovi"
             >
               ✕
             </button>
@@ -275,19 +255,13 @@ export default function Wishlist() {
 
         {items.length > 0 && filtered.length === 0 && (
           <div style={styles.emptyState}>
-            <p style={styles.emptyIcon}>🔍</p>
             <p style={styles.emptyText}>Nessun libro corrisponde ai filtri selezionati.</p>
           </div>
         )}
 
         {items.length === 0 && (
           <div style={styles.emptyState}>
-            <p style={styles.emptyIcon}>⭐</p>
-            <p style={styles.emptyText}>
-              La tua wishlist è vuota.
-              <br />
-              Aggiungi il primo libro qui sopra.
-            </p>
+            <p style={styles.emptyText}>La tua wishlist è vuota.</p>
           </div>
         )}
       </div>
@@ -295,240 +269,202 @@ export default function Wishlist() {
   )
 }
 
-/* ================= STILI iOS WHITE 3D ================= */
+/* ================= STILI MINIMALISTI ================= */
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '16px',
+    padding: '24px 16px 100px',
     background: '#F2F2F7',
     minHeight: '100vh',
-    padding: '16px 16px 110px',
-    fontFamily:
-      '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif',
-    boxSizing: 'border-box'
-  },
-
-  headerGroup: {
+    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+    boxSizing: 'border-box',
     display: 'flex',
     flexDirection: 'column',
-    gap: '4px',
-    paddingLeft: '4px'
+    gap: 14
   },
-
   header: {
-    fontSize: '24px',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    marginBottom: 4
+  },
+  title: {
+    fontSize: 28,
     fontWeight: 700,
     color: TEXT_MAIN,
     margin: 0,
     letterSpacing: '-0.5px'
   },
-
-  eyebrow: {
-    fontSize: '12px',
-    fontWeight: 600,
-    color: TEXT_MUTED,
-    textTransform: 'uppercase',
-    letterSpacing: '0.8px',
-    margin: 0
+  metaLine: {
+    fontSize: 12,
+    fontWeight: 500,
+    color: TEXT_MUTED
   },
-
-  formCard: {
+  card3d: {
+    padding: 14,
+    borderRadius: 16,
+    background: '#FFFFFF',
+    boxShadow: '4px 4px 12px #D8DBE0, -4px -4px 12px #FFFFFF',
     display: 'flex',
     flexDirection: 'column',
-    gap: '12px',
-    padding: '16px',
-    borderRadius: '24px',
-    background: '#FFFFFF',
-    boxShadow: '6px 6px 14px #D8DBE0, -6px -6px 14px #FFFFFF'
+    gap: 10
   },
-
-  searchSectionCard: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px',
-    padding: '16px',
-    borderRadius: '24px',
-    background: '#FFFFFF',
-    boxShadow: '6px 6px 14px #D8DBE0, -6px -6px 14px #FFFFFF'
-  },
-
-  sectionLabel: {
-    fontSize: '11px',
-    fontWeight: 700,
-    color: TEXT_MUTED,
-    textTransform: 'uppercase',
-    letterSpacing: '0.8px',
-    marginBottom: '2px'
-  },
-
   input: {
     width: '100%',
-    padding: '12px 14px',
-    borderRadius: '14px',
+    padding: '10px 14px',
+    borderRadius: 12,
     border: 'none',
     background: '#F2F2F7',
+    fontSize: 14,
     color: TEXT_MAIN,
-    fontSize: '14px',
-    fontWeight: 500,
     boxShadow: 'inset 2px 2px 5px #D8DBE0, inset -2px -2px 5px #FFFFFF',
     outline: 'none',
     boxSizing: 'border-box'
   },
-
-  searchInput: {
+  select: {
     width: '100%',
-    padding: '12px 14px',
-    borderRadius: '14px',
+    padding: '10px 14px',
+    borderRadius: 12,
     border: 'none',
     background: '#F2F2F7',
+    fontSize: 14,
     color: TEXT_MAIN,
-    fontSize: '14px',
-    fontWeight: 500,
     boxShadow: 'inset 2px 2px 5px #D8DBE0, inset -2px -2px 5px #FFFFFF',
     outline: 'none',
     boxSizing: 'border-box'
   },
-
-  selectGrid: {
-    display: 'flex',
-    gap: '10px',
-    width: '100%'
-  },
-
-  selectWrapper: {
-    flex: 1,
-    position: 'relative'
-  },
-
-  selectInput: {
-    width: '100%',
-    padding: '10px 12px',
-    borderRadius: '14px',
-    border: 'none',
-    background: '#FFFFFF',
-    fontSize: '13px',
-    fontWeight: 600,
-    boxShadow: '3px 3px 8px #D8DBE0, -3px -3px 8px #FFFFFF',
-    outline: 'none',
-    boxSizing: 'border-box',
-    cursor: 'pointer',
-    appearance: 'none',
-    WebkitAppearance: 'none'
-  },
-
   addButton: {
-    marginTop: '4px',
-    padding: '14px',
-    borderRadius: '16px',
+    marginTop: 2,
+    padding: '12px',
+    borderRadius: 12,
     border: 'none',
     background: '#FFFFFF',
-    color: '#007AFF',
-    fontWeight: 700,
-    fontSize: '14px',
-    boxShadow: '4px 4px 10px #D8DBE0, -4px -4px 10px #FFFFFF',
-    transition: 'all 0.2s ease'
-  },
-
-  resetButton: {
-    alignSelf: 'center',
-    padding: '8px 16px',
-    borderRadius: '12px',
-    border: 'none',
-    background: '#E5E5EA',
     color: TEXT_MAIN,
-    fontSize: '12px',
     fontWeight: 600,
-    cursor: 'pointer',
-    marginTop: '4px'
+    fontSize: 14,
+    boxShadow: '2px 2px 6px #D8DBE0, -2px -2px 6px #FFFFFF',
+    transition: 'opacity 0.2s ease'
   },
-
-  list: {
+  searchContainer: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '12px'
+    gap: 8
   },
-
-  card: {
+  searchRow: {
+    display: 'flex',
+    gap: 10
+  },
+  searchInput: {
+    flex: 1,
+    padding: '10px 14px',
+    borderRadius: 12,
+    border: 'none',
+    background: '#F2F2F7',
+    fontSize: 14,
+    color: TEXT_MAIN,
+    boxShadow: 'inset 2px 2px 5px #D8DBE0, inset -2px -2px 5px #FFFFFF',
+    outline: 'none',
+    boxSizing: 'border-box'
+  },
+  resetButton: {
+    padding: '10px 14px',
+    borderRadius: 12,
+    border: 'none',
+    background: '#FFFFFF',
+    color: TEXT_MAIN,
+    cursor: 'pointer',
+    fontSize: 12,
+    fontWeight: 600,
+    boxShadow: '2px 2px 5px #D8DBE0, -2px -2px 5px #FFFFFF'
+  },
+  selectGrid: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: 8
+  },
+  filterSelect: {
+    width: '100%',
+    padding: '8px 10px',
+    borderRadius: 10,
+    border: 'none',
+    background: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 600,
+    boxShadow: '2px 2px 5px #D8DBE0, -2px -2px 5px #FFFFFF',
+    outline: 'none',
+    boxSizing: 'border-box',
+    cursor: 'pointer'
+  },
+  stack: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 10
+  },
+  rowCard: {
+    padding: '12px 14px',
+    borderRadius: 16,
+    background: '#FFFFFF',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '16px',
-    borderRadius: '20px',
-    background: '#FFFFFF',
-    boxShadow: '6px 6px 14px #D8DBE0, -6px -6px 14px #FFFFFF'
+    boxShadow: '4px 4px 12px #D8DBE0, -4px -4px 12px #FFFFFF',
+    gap: 12
   },
-
-  info: {
+  details: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '4px',
-    paddingRight: '12px'
+    gap: 2,
+    flex: 1,
+    overflow: 'hidden'
   },
-
-  titleBook: {
-    fontWeight: 700,
-    fontSize: '16px',
+  bookTitle: {
+    fontSize: 14,
+    fontWeight: 600,
     color: TEXT_MAIN,
     margin: 0,
-    letterSpacing: '-0.3px'
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis'
   },
-
-  meta: {
-    fontSize: '13px',
-    fontWeight: 500,
+  author: {
+    fontSize: 12,
     color: TEXT_MUTED,
-    margin: 0
+    margin: 0,
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis'
   },
-
-  genreTag: {
-    fontSize: '11px',
-    fontWeight: 600,
-    color: TEXT_MUTED,
-    background: '#F2F2F7',
-    padding: '4px 10px',
-    borderRadius: '10px',
-    width: 'fit-content',
-    marginTop: '4px',
-    boxShadow: 'inset 1px 1px 3px #D8DBE0, inset -1px -1px 3px #FFFFFF'
+  metaRow: {
+    fontSize: 11,
+    color: '#A1A1A6',
+    marginTop: 2,
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis'
   },
-
   delete: {
     border: 'none',
     background: '#F2F2F7',
-    width: '32px',
-    height: '32px',
-    borderRadius: '16px',
-    fontSize: '12px',
-    fontWeight: 700,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    fontSize: 12,
+    fontWeight: 600,
     cursor: 'pointer',
-    color: '#FF3B30',
+    color: TEXT_MUTED,
     flexShrink: 0,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '3px 3px 6px #D8DBE0, -3px -3px 6px #FFFFFF'
+    boxShadow: '2px 2px 5px #D8DBE0, -2px -2px 5px #FFFFFF'
   },
-
   emptyState: {
-    padding: '36px 16px',
     textAlign: 'center',
-    borderRadius: '24px',
-    background: '#FFFFFF',
-    boxShadow: 'inset 2px 2px 5px #D8DBE0, inset -2px -2px 5px #FFFFFF'
+    padding: '20px 16px'
   },
-
-  emptyIcon: {
-    fontSize: '32px',
-    margin: 0
-  },
-
   emptyText: {
-    fontSize: '13px',
-    fontWeight: 500,
+    fontSize: 13,
     color: TEXT_MUTED,
-    marginTop: '8px',
-    lineHeight: 1.5
+    margin: 0
   }
 }
