@@ -20,9 +20,9 @@ type Book = {
 }
 
 const MONTHS = [
-  'Gen', 'Feb', 'Mar', 'Apr',
-  'Mag', 'Giu', 'Lug', 'Ago',
-  'Set', 'Ott', 'Nov', 'Dic'
+  'Gennaio', 'Febbraio', 'Marzo', 'Aprile',
+  'Maggio', 'Giugno', 'Luglio', 'Agosto',
+  'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
 ]
 
 const COUNTRY_FLAGS: Record<string, string> = {
@@ -337,11 +337,7 @@ export default function Library() {
                 )}
 
                 <div style={styles.details}>
-                  <div style={styles.titleRow}>
-                    <h3 style={styles.bookTitle}>{book.title}</h3>
-                    {book.classic && <span style={styles.classicTag}>Classico</span>}
-                  </div>
-
+                  <h3 style={styles.bookTitle}>{book.title}</h3>
                   <p style={styles.author}>{book.author}</p>
 
                   <div style={styles.metaRow}>
@@ -358,10 +354,12 @@ export default function Library() {
 
                   {readingDateStr && (
                     <div style={styles.readingDateRow}>
-                      📅 {readingDateStr}
+                      {readingDateStr}
                     </div>
                   )}
                 </div>
+
+                {book.classic && <span style={styles.classicTag}>Classico</span>}
               </div>
             </div>
           )
@@ -491,7 +489,7 @@ const styles: Record<string, React.CSSProperties> = {
     position: 'relative',
     zIndex: 2,
     display: 'flex',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 12,
     padding: 10,
     borderRadius: 16,
@@ -521,55 +519,47 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     gap: 2,
     flex: 1,
-    overflow: 'hidden'
-  },
-  titleRow: {
-    display: 'flex',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-    gap: 8
+    paddingRight: 20
   },
   bookTitle: {
     fontSize: 14,
     fontWeight: 600,
     color: '#1C1C1E',
     margin: 0,
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis'
+    wordBreak: 'break-word'
   },
   classicTag: {
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
     fontSize: '11px',
     color: '#555555',
     border: '1px solid #CCCCCC',
     padding: '1px 5px',
     borderRadius: '2px',
-    textTransform: 'uppercase',
-    flexShrink: 0
+    textTransform: 'uppercase'
   },
   author: {
     fontSize: 12,
     color: '#8E8E93',
     margin: 0,
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis'
+    wordBreak: 'break-word'
   },
   metaRow: {
     fontSize: 11,
     color: '#A1A1A6',
     display: 'flex',
+    flexWrap: 'wrap',
     gap: 4,
     alignItems: 'center',
     marginTop: 2,
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis'
+    wordBreak: 'break-word'
   },
   readingDateRow: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 600,
-    color: '#1C1C1E',
+    color: 'rgba(0, 0, 0, 0.85)',
+    letterSpacing: '-0.3px',
     marginTop: 3
   },
   modalOverlay: {
