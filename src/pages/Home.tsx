@@ -43,11 +43,6 @@ export default function Home() {
     (b) => b.readingYear === currentYear
   )
 
-  const totalPages = booksThisYear.reduce(
-    (sum, b) => sum + (b.pages || 0),
-    0
-  )
-
   const isClassic = (b: Book) =>
     b.classic === true || (b as any).isClassic === true
 
@@ -61,25 +56,12 @@ export default function Home() {
 
   return (
     <div style={styles.container}>
-      {/* Header essenziale con solo il riferimento all'anno */}
+      {/* Header stile iOS Large Title */}
       <header style={styles.headerGroup}>
-        <h1 style={styles.header}>Anno {currentYear}</h1>
+        <h1 style={styles.headerTitle}>
+          📚 Letture del <span style={styles.yearHighlight}>2026</span>
+        </h1>
       </header>
-
-      {/* Sintesi dati minimale */}
-      <section style={styles.summaryBox}>
-        <div style={styles.statItem}>
-          <span style={styles.statLabel}>Libri letti:</span>
-          <span style={styles.statValue}>{booksThisYear.length}</span>
-        </div>
-        <div style={styles.statDivider} />
-        <div style={styles.statItem}>
-          <span style={styles.statLabel}>Pagine totali:</span>
-          <span style={styles.statValue}>{totalPages.toLocaleString('it-IT')}</span>
-        </div>
-      </section>
-
-      <h2 style={styles.sectionTitle}>Letture di quest'anno</h2>
 
       {/* ELENCO/REGISTRO LETTURE */}
       {booksThisYear.length > 0 ? (
@@ -97,7 +79,6 @@ export default function Home() {
                 <div style={styles.bookDetails}>
                   <div style={styles.titleRow}>
                     <span style={styles.bookTitle}>{book.title}</span>
-                    {isClassic(book) && <span style={styles.classicTag}>Classico</span>}
                   </div>
 
                   <p style={styles.bookAuthor}>{book.author}</p>
@@ -106,13 +87,20 @@ export default function Home() {
                   {book.genre && <p style={styles.bookGenre}>{book.genre}</p>}
 
                   <div style={styles.metaRow}>
-                    {readingMonthFormatted && <span>{readingMonthFormatted}</span>}
+                    {readingMonthFormatted && (
+                      <span style={styles.readingMonthText}>{readingMonthFormatted}</span>
+                    )}
                     {readingMonthFormatted && <span>•</span>}
                     <span>{book.pages} pagine</span>
                     {pubYear && <span>•</span>}
                     {pubYear && <span>{pubYear}</span>}
                   </div>
                 </div>
+
+                {/* Etichetta posizionata in basso a destra della scheda */}
+                {isClassic(book) && (
+                  <span style={styles.classicTagBottomRight}>Classico</span>
+                )}
               </div>
             )
           })}
@@ -134,77 +122,41 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     gap: '24px',
     background: '#FFFFFF',
-    color: '#111111',
+    color: '#000000',
     minHeight: '100vh',
-    padding: '24px 20px 80px',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+    padding: '32px 20px 80px',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif',
     boxSizing: 'border-box',
     maxWidth: '680px',
     margin: '0 auto'
   },
 
   headerGroup: {
-    borderBottom: '1px solid #E5E5E5',
-    paddingBottom: '12px'
+    paddingBottom: '16px',
+    borderBottom: '1px solid #E5E5E5'
   },
 
-  header: {
-    fontSize: '22px',
-    fontWeight: 600,
-    color: '#111111',
+  headerTitle: {
+    fontSize: '34px',
+    fontWeight: 700,
+    color: '#000000',
     margin: 0,
-    letterSpacing: '-0.3px'
+    letterSpacing: '-0.8px',
+    lineHeight: '1.15'
   },
 
-  sectionTitle: {
-    fontSize: '14px',
-    fontWeight: 600,
-    color: '#111111',
-    margin: '8px 0 0',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px'
-  },
-
-  summaryBox: {
-    padding: '12px 16px',
-    border: '1px solid #E5E5E5',
-    borderRadius: '4px',
-    background: '#FAFAFA',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '24px'
-  },
-
-  statItem: {
-    display: 'flex',
-    alignItems: 'baseline',
-    gap: '8px'
-  },
-
-  statLabel: {
-    fontSize: '13px',
-    color: '#666666'
-  },
-
-  statValue: {
-    fontSize: '15px',
-    fontWeight: 600,
-    color: '#111111'
-  },
-
-  statDivider: {
-    width: '1px',
-    height: '16px',
-    background: '#E5E5E5'
+  yearHighlight: {
+    color: '#8E8E93',
+    fontWeight: 500
   },
 
   listContainer: {
     display: 'flex',
-    flexDirection: 'column',
-    borderTop: '1px solid #E5E5E5'
+    flexDirection: 'column'
   },
 
   listItem: {
+    position: 'relative',
     display: 'flex',
     alignItems: 'flex-start',
     gap: '16px',
@@ -214,8 +166,8 @@ const styles: Record<string, React.CSSProperties> = {
 
   indexColumn: {
     fontSize: '12px',
-    fontFamily: 'monospace',
-    color: '#888888',
+    fontFamily: 'SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+    color: '#8E8E93',
     paddingTop: '2px',
     width: '20px'
   },
@@ -230,52 +182,61 @@ const styles: Record<string, React.CSSProperties> = {
   titleRow: {
     display: 'flex',
     alignItems: 'baseline',
-    gap: '8px',
-    justifyContent: 'space-between'
+    gap: '8px'
   },
 
   bookTitle: {
     fontSize: '15px',
     fontWeight: 600,
-    color: '#111111',
+    color: '#000000',
     margin: 0
   },
 
-  classicTag: {
-    fontSize: '11px',
-    color: '#555555',
-    border: '1px solid #CCCCCC',
+  classicTagBottomRight: {
+    position: 'absolute',
+    right: 0,
+    bottom: '16px',
+    fontSize: '10px',
+    fontWeight: 500,
+    color: '#636366',
+    border: '1px solid #D1D1D6',
     padding: '1px 5px',
-    borderRadius: '2px',
-    textTransform: 'uppercase'
+    borderRadius: '4px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.3px'
   },
 
   bookAuthor: {
     fontSize: '13px',
-    color: '#444444',
+    color: '#3A3A3C',
     margin: 0
   },
 
   bookGenre: {
     fontSize: '12px',
-    color: '#666666',
+    color: '#8E8E93',
     margin: 0,
     fontStyle: 'italic'
   },
 
   metaRow: {
     fontSize: '12px',
-    color: '#777777',
+    color: '#8E8E93',
     display: 'flex',
     alignItems: 'center',
     gap: '6px',
     marginTop: '4px'
   },
 
+  readingMonthText: {
+    color: '#000000',
+    fontWeight: 600
+  },
+
   emptyState: {
     padding: '24px 0',
     fontSize: '13px',
-    color: '#666666',
+    color: '#8E8E93',
     fontStyle: 'italic'
   }
 }

@@ -7,6 +7,7 @@ type Book = {
   author: string
   genre: string
   series?: string
+  country?: string
   pages?: number
   readingMonth?: number
   readingYear?: number
@@ -22,7 +23,7 @@ const MONTHS = [
   'Set', 'Ott', 'Nov', 'Dic'
 ]
 
-type View = 'home' | 'genres' | 'classics' | 'authorsAll' | 'series' | 'tags'
+type View = 'home' | 'genres' | 'classics' | 'authorsAll' | 'series' | 'tags' | 'countries'
 
 type AuthorItem = {
   author: string
@@ -39,8 +40,40 @@ const HOME_CARDS: { view: View; icon: string; title: string; desc: string }[] = 
   { view: 'genres', icon: '📚', title: 'Generi', desc: 'Esplora per categoria' },
   { view: 'classics', icon: '🏛️', title: 'Classici', desc: 'Autori e opere classiche' },
   { view: 'series', icon: '📖', title: 'Serie', desc: 'Esplora per saga' },
-  { view: 'tags', icon: '🏷️', title: 'Tag', desc: 'Esplora per argomento' }
+  { view: 'tags', icon: '🏷️', title: 'Tag', desc: 'Esplora per argomento' },
+  { view: 'countries', icon: '🌐', title: 'Paesi', desc: 'Esplora per nazione' }
 ]
+
+const COUNTRY_FLAGS: Record<string, string> = {
+  'Italia': '🇮🇹',
+  'Stati Uniti': '🇺🇸',
+  'Regno Unito': '🇬🇧',
+  'Francia': '🇫🇷',
+  'Germania': '🇩🇪',
+  'Spagna': '🇪🇸',
+  'Giappone': '🇯🇵',
+  'Russia': '🇷🇺',
+  'Cina': '🇨🇳',
+  'Brasile': '🇧🇷',
+  'Canada': '🇨🇦',
+  'Australia': '🇦🇺',
+  'Irlanda': '🇮🇪',
+  'Svezia': '🇸🇪',
+  'Norvegia': '🇳🇴',
+  'Polonia': '🇵🇱',
+  'Portogallo': '🇵🇹',
+  'Grecia': '🇬🇷',
+  'Austria': '🇦🇹',
+  'Svizzera': '🇨🇭',
+  'Messico': '🇲🇽',
+  'Argentina': '🇦🇷',
+  'Cile': '🇨🇱',
+  'Colombia': '🇨🇴'
+}
+
+const getFlag = (country: string) => {
+  return COUNTRY_FLAGS[country] || '📍'
+}
 
 export default function Explore() {
   const [books, setBooks] = useState<Book[]>([])
@@ -58,6 +91,9 @@ export default function Explore() {
 
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
   const [selectedTagAuthor, setSelectedTagAuthor] = useState<string | null>(null)
+
+  const [selectedCountry, setSelectedCountry] = useState<string | null>(null)
+  const [selectedCountryAuthor, setSelectedCountryAuthor] = useState<string | null>(null)
 
   useEffect(() => {
     load()
@@ -133,6 +169,26 @@ export default function Explore() {
     if (!selectedTagAuthor) return []
     return booksByTag.filter(b => b.author === selectedTagAuthor)
   }, [booksByTag, selectedTagAuthor])
+
+  const countriesList = useMemo(() => {
+    const map: Record<string, Book[]> = {}
+    books.forEach(b => {
+      if (!b.country) return
+      if (!map[b.country]) map[b.country] = []
+      map[b.country].push(b)
+    })
+    return Object.entries(map).sort((a, b) => b[1].length - a[1].length)
+  }, [books])
+
+  const booksByCountry = useMemo(() => {
+    if (!selectedCountry) return []
+    return books.filter(b => b.country === selectedCountry)
+  }, [books, selectedCountry])
+
+  const booksByCountryAuthor = useMemo(() => {
+    if (!selectedCountryAuthor) return []
+    return booksByCountry.filter(b => b.author === selectedCountryAuthor)
+  }, [booksByCountry, selectedCountryAuthor])
 
   const totalBooks = books.length
 
@@ -225,6 +281,14 @@ export default function Explore() {
       } else {
         setView('home')
       }
+    } else if (view === 'countries') {
+      if (selectedCountryAuthor) {
+        setSelectedCountryAuthor(null)
+      } else if (selectedCountry) {
+        setSelectedCountry(null)
+      } else {
+        setView('home')
+      }
     } else {
       setView('home')
     }
@@ -269,50 +333,60 @@ export default function Explore() {
     )
   }
 
-  const renderCleanBookList = (list: Book[]) => {
+  /* Vista a griglia stile "Library" con copertine in risalto */
+  const renderGridBookList = (list: Book[]) => {
     const sortedList = [...list].sort((a, b) => {
       const aKey = (a.readingYear ?? 0) * 100 + (a.readingMonth ?? 0)
       const bKey = (b.readingYear ?? 0) * 100 + (b.readingMonth ?? 0)
-      return bKey - aKey
+      return aKey - bKey
     })
 
     return (
-      <div style={styles.stack}>
-        <div style={styles.metaLine}>{sortedList.length} libri</div>
+      <div>
+        <div style={{ ...styles.metaLine, marginBottom: 8 }}>{sortedList.length} libri</div>
+        <div style={styles.gridContainer}>
+          {sortedList.map(b => {
+            const monthName = b.readingMonth ? MONTHS[b.readingMonth - 1] : null
 
-        {sortedList.map(b => {
-          const monthName = b.readingMonth ? MONTHS[b.readingMonth - 1] : null
+            // Genere + Pagine
+            const genreAndPages = [
+              b.genre,
+              b.pages && b.pages > 0 ? `${b.pages} p.` : null
+            ].filter(Boolean).join(' • ')
 
-          return (
-            <div key={b.id} style={styles.bookCard}>
-              {b.cover ? (
-                <img src={b.cover} alt="" style={styles.cover} />
-              ) : (
-                <div style={styles.coverPlaceholder} />
-              )}
-
-              <div style={styles.details}>
-                <div style={styles.titleRow}>
-                  <h3 style={styles.bookTitle}>{b.title}</h3>
+            return (
+              <div key={b.id} style={styles.card}>
+                <div style={styles.coverWrapper}>
+                  {b.cover ? (
+                    <img src={b.cover} alt={b.title} style={styles.coverImage} loading="lazy" />
+                  ) : (
+                    <div style={styles.placeholderCover}>
+                      <span style={styles.placeholderIcon}>📚</span>
+                      <span style={styles.placeholderTitle}>{b.title}</span>
+                    </div>
+                  )}
                   {b.classic && <span style={styles.classicTag}>Classico</span>}
                 </div>
 
-                <p style={styles.author}>{b.author}</p>
-
-                <div style={styles.metaRow}>
-                  {b.genre && <span>{b.genre}</span>}
-                  {b.publicationYear && <span>• {b.publicationYear}</span>}
-                  {b.pages && b.pages > 0 && <span>• {b.pages} p.</span>}
-                  {(monthName || b.readingYear) && (
-                    <span style={styles.readingDate}>
-                      • {[monthName, b.readingYear].filter(Boolean).join(' ')}
-                    </span>
-                  )}
+                <div style={styles.cardInfo}>
+                  <div style={styles.bookTitle} title={b.title}>
+                    {b.title}
+                  </div>
+                  <div style={styles.bookAuthor}>{b.author}</div>
+                  
+                  {genreAndPages && <div style={styles.bookGenre}>{genreAndPages}</div>}
+                  
+                  <div style={styles.metaRowGrid}>
+                    <div style={styles.readingDateDiscrete}>
+                      {monthName ? `${monthName} ` : ''}
+                      {b.readingYear || ''}
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
       </div>
     )
   }
@@ -320,7 +394,7 @@ export default function Explore() {
   return (
     <div style={styles.container}>
       <header style={styles.header}>
-        <h1 style={styles.title}>Esplora</h1>
+        <h1 style={styles.title}>🔍 Esplora</h1>
         {view !== 'home' && (
           <button style={styles.back} onClick={goBack}>
             ‹ Indietro
@@ -368,7 +442,7 @@ export default function Explore() {
       }
 
       {view === 'genres' && selectedGenre && selectedGenreAuthor &&
-        renderCleanBookList(booksByGenreAuthor)
+        renderGridBookList(booksByGenreAuthor)
       }
 
       {view === 'classics' && !selectedClassicAuthor &&
@@ -376,7 +450,7 @@ export default function Explore() {
       }
 
       {view === 'classics' && selectedClassicAuthor &&
-        renderCleanBookList(booksByClassicAuthor)
+        renderGridBookList(booksByClassicAuthor)
       }
 
       {view === 'series' && !selectedSeries && (
@@ -402,7 +476,7 @@ export default function Explore() {
       )}
 
       {view === 'series' && selectedSeries &&
-        renderCleanBookList(booksBySeries)
+        renderGridBookList(booksBySeries)
       }
 
       {view === 'tags' && !selectedTag && (
@@ -432,7 +506,37 @@ export default function Explore() {
       }
 
       {view === 'tags' && selectedTag && selectedTagAuthor &&
-        renderCleanBookList(booksByTagAuthor)
+        renderGridBookList(booksByTagAuthor)
+      }
+
+      {view === 'countries' && !selectedCountry && (
+        <div style={styles.stack}>
+          {countriesList.length === 0 && (
+            <div style={styles.emptyState}>
+              <p style={styles.emptyText}>Nessun paese registrato.</p>
+            </div>
+          )}
+          {countriesList.map(([country, list]) => (
+            <div
+              key={country}
+              style={styles.rowCard}
+              onClick={() => setSelectedCountry(country)}
+            >
+              <span style={styles.rowTitle}>{getFlag(country)} {country}</span>
+              <div style={styles.rightStats}>
+                <span style={styles.pill}>{list.length}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {view === 'countries' && selectedCountry && !selectedCountryAuthor &&
+        renderAuthorsList(booksByCountry, setSelectedCountryAuthor)
+      }
+
+      {view === 'countries' && selectedCountry && selectedCountryAuthor &&
+        renderGridBookList(booksByCountryAuthor)
       }
 
       {view === 'authorsAll' && !globalAuthor && (
@@ -517,13 +621,13 @@ export default function Explore() {
       )}
 
       {view === 'authorsAll' && globalAuthor &&
-        renderCleanBookList(booksByGlobalAuthor)
+        renderGridBookList(booksByGlobalAuthor)
       }
     </div>
   )
 }
 
-/* ================= STILI MINIMALISTI ================= */
+/* ================= STILI STILE LIBRARY ================= */
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
@@ -688,7 +792,8 @@ const styles: Record<string, React.CSSProperties> = {
   rowTitle: {
     fontSize: 14,
     fontWeight: 600,
-    color: TEXT_MAIN
+    color: TEXT_MAIN,
+    wordBreak: 'break-word'
   },
   rightStats: {
     display: 'flex',
@@ -712,88 +817,115 @@ const styles: Record<string, React.CSSProperties> = {
     color: TEXT_MUTED,
     margin: 0
   },
-  bookCard: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12,
-    padding: 10,
-    borderRadius: 16,
-    background: '#FFFFFF',
-    boxShadow: '4px 4px 12px #D8DBE0, -4px -4px 12px #FFFFFF'
-  },
-  cover: {
-    width: 42,
-    height: 62,
-    borderRadius: 6,
-    objectFit: 'cover',
-    flexShrink: 0
-  },
-  coverPlaceholder: {
-    width: 42,
-    height: 62,
-    borderRadius: 6,
-    background: '#E5E5EA',
-    flexShrink: 0
-  },
-  details: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 2,
-    flex: 1,
-    overflow: 'hidden'
-  },
-  titleRow: {
-    display: 'flex',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-    gap: 8
-  },
-  bookTitle: {
-    fontSize: 14,
-    fontWeight: 600,
-    color: TEXT_MAIN,
-    margin: 0,
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis'
-  },
-  classicTag: {
-    fontSize: '11px',
-    color: '#555555',
-    border: '1px solid #CCCCCC',
-    padding: '1px 5px',
-    borderRadius: '2px',
-    textTransform: 'uppercase',
-    flexShrink: 0
-  },
-  author: {
-    fontSize: 12,
-    color: TEXT_MUTED,
-    margin: 0,
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis'
-  },
-  metaRow: {
-    fontSize: 11,
-    color: '#A1A1A6',
-    display: 'flex',
-    gap: 4,
-    alignItems: 'center',
-    marginTop: 2,
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis'
-  },
-  readingDate: {
-    color: '#636366',
-    fontWeight: 500
-  },
   letterHeader: {
     fontSize: 12,
     fontWeight: 700,
     color: TEXT_MUTED,
     marginTop: 6,
     paddingLeft: 2
+  },
+
+  /* Stili per la griglia stile Library */
+  gridContainer: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
+    gap: '18px 12px'
+  },
+  card: {
+    display: 'flex',
+    flexDirection: 'column'
+  },
+  coverWrapper: {
+    position: 'relative',
+    width: '100%',
+    aspectRatio: '2/3',
+    borderRadius: '6px',
+    overflow: 'hidden',
+    boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+    border: '1px solid #E5E5E5',
+    background: '#FFFFFF'
+  },
+  coverImage: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover'
+  },
+  placeholderCover: {
+    width: '100%',
+    height: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '6px',
+    boxSizing: 'border-box',
+    textAlign: 'center',
+    background: '#E5E5EA'
+  },
+  placeholderIcon: {
+    fontSize: '18px',
+    marginBottom: '4px'
+  },
+  placeholderTitle: {
+    fontSize: '9px',
+    fontWeight: 600,
+    color: TEXT_MUTED,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    display: '-webkit-box',
+    WebkitLineClamp: 3,
+    WebkitBoxOrient: 'vertical'
+  },
+  classicTag: {
+    position: 'absolute',
+    top: 4,
+    left: 4,
+    background: 'rgba(0, 0, 0, 0.75)',
+    color: '#FFFFFF',
+    fontSize: '8px',
+    fontWeight: 600,
+    padding: '1px 4px',
+    borderRadius: '3px',
+    textTransform: 'uppercase'
+  },
+  cardInfo: {
+    marginTop: '6px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '2px'
+  },
+  bookTitle: {
+    fontSize: '11px',
+    fontWeight: 600,
+    color: TEXT_MAIN,
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis'
+  },
+  bookAuthor: {
+    fontSize: '10px',
+    color: '#3A3A3C',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis'
+  },
+  bookGenre: {
+    fontSize: '9px',
+    color: TEXT_MUTED,
+    fontStyle: 'italic',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis'
+  },
+  metaRowGrid: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: '2px'
+  },
+  readingDateDiscrete: {
+    fontSize: '10px',
+    fontWeight: 600,
+    color: '#1C1C1E'
   }
 }

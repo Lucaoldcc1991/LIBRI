@@ -49,7 +49,6 @@ export default function Settings() {
   ========================= */
   const loadImageAsBase64 = (url: string): Promise<{ dataUrl: string; format: string } | null> => {
     return new Promise((resolve) => {
-      // Se è già in formato Base64 Data URL
       if (url.startsWith('data:image/')) {
         const format = url.substring(url.indexOf('/') + 1, url.indexOf(';')).toUpperCase()
         resolve({ dataUrl: url, format: format === 'JPG' ? 'JPEG' : format })
@@ -117,6 +116,7 @@ export default function Settings() {
 
     const excelData = readBooks.map((b, index) => ({
       '#': index + 1,
+      'Copertina': b.cover ? 'Disponibile' : 'Assente',
       'Anno di Lettura': b.readingYear || '-',
       'Titolo': b.title,
       'Autore': b.author,
@@ -131,8 +131,10 @@ export default function Settings() {
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Libreria Letti')
 
-    const maxCols = [
+    // Impostazione larghezza colonne
+    worksheet['!cols'] = [
       { wch: 5 },  // #
+      { wch: 12 }, // Copertina
       { wch: 15 }, // Anno
       { wch: 30 }, // Titolo
       { wch: 25 }, // Autore
@@ -142,7 +144,9 @@ export default function Settings() {
       { wch: 15 }, // Paese
       { wch: 10 }  // Classico
     ]
-    worksheet['!cols'] = maxCols
+
+    // Impostazione altezza righe per una leggibilità adeguata
+    worksheet['!rows'] = [{ hpt: 24 }, ...excelData.map(() => ({ hpt: 20 }))]
 
     XLSX.writeFile(
       workbook,
@@ -151,7 +155,7 @@ export default function Settings() {
   }
 
   /* =========================
-     EXPORT PDF (.pdf) CON COPERTINE
+     EXPORT PDF (.pdf) CON COPERTINE ADEGUATE
   ========================= */
   const exportPDF = async () => {
     const readBooks = await getSortedReadBooks()
@@ -193,7 +197,7 @@ export default function Settings() {
     // Tabella PDF (Colonna 1 riservata alla Copertina)
     const tableData = readBooks.map((b, index) => [
       index + 1,
-      '', // Spazio per l'immagine della copertina
+      '', // Spazio riservato per il disegno dell'immagine
       b.readingYear || '-',
       b.title,
       b.author,
@@ -214,12 +218,13 @@ export default function Settings() {
       },
       styles: {
         fontSize: 9,
-        cellPadding: 3,
-        valign: 'middle'
+        cellPadding: 2,
+        valign: 'middle',
+        minCellHeight: 18 // Altezza sufficiente a contenere la copertina
       },
       columnStyles: {
         0: { halign: 'center', cellWidth: 10 },
-        1: { halign: 'center', cellWidth: 16 }, // Colonna Copertina
+        1: { halign: 'center', cellWidth: 16 }, // Larghezza riservata alla Copertina
         2: { halign: 'center', cellWidth: 16 },
         3: { cellWidth: 50 },
         4: { cellWidth: 40 },
@@ -232,8 +237,11 @@ export default function Settings() {
         if (data.section === 'body' && data.column.index === 1) {
           const coverObj = loadedCovers[data.row.index]
           if (coverObj) {
+            // Dimensioni proporzionate (2:3 aspect ratio)
             const imgWidth = 10
-            const imgHeight = 14
+            const imgHeight = 15
+            
+            // Calcolo posizione per centrare perfettamente la copertina nella cella
             const posX = data.cell.x + (data.cell.width - imgWidth) / 2
             const posY = data.cell.y + (data.cell.height - imgHeight) / 2
 
@@ -471,7 +479,6 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '16px',
     background: '#F2F2F7',
     minHeight: '100vh',
-    // MODIFICATO: Aumentato il padding inferiore a 110px per non far coprire i contenuti dalla nav bar
     padding: '16px 16px 110px',
     fontFamily:
       '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif',

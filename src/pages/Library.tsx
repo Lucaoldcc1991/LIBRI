@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { db } from '../db/database'
 import BookForm from '../components/BookForm'
 
@@ -6,23 +6,26 @@ type Book = {
   id?: number
   title: string
   author: string
-  genre: string
+  genre?: string
   series?: string
   country?: string
   cover?: string
   pages: number
   publicationYear?: number
-  readingMonth?: number
+  publishYear?: number
+  year?: number
+  readingMonth?: number | string
+  month?: number | string
   readingYear?: number
   classic?: boolean
-  createdAt: number
+  isClassic?: boolean
+  createdAt?: number
   tags?: string[]
 }
 
-const MONTHS = [
-  'Gennaio', 'Febbraio', 'Marzo', 'Aprile',
-  'Maggio', 'Giugno', 'Luglio', 'Agosto',
-  'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
+const MONTHS_IT = [
+  '', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+  'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
 ]
 
 const COUNTRY_FLAGS: Record<string, string> = {
@@ -58,11 +61,9 @@ const COUNTRY_FLAGS: Record<string, string> = {
 function getCountryFlag(country?: string) {
   if (!country) return ''
   const trimmed = country.trim().toLowerCase()
-  
   const key = Object.keys(COUNTRY_FLAGS).find(
     (k) => k.toLowerCase() === trimmed
   )
-
   return key ? `${COUNTRY_FLAGS[key]} ` : '🌐 '
 }
 
@@ -72,8 +73,6 @@ export default function Library() {
   const [editingBook, setEditingBook] = useState<Book | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [yearFilter, setYearFilter] = useState<number | 'all'>('all')
-  const [openSwipeId, setOpenSwipeId] = useState<number | null>(null)
-  const [activeOffset, setActiveOffset] = useState<{ id: number; offset: number } | null>(null)
 
   useEffect(() => {
     loadBooks()
@@ -81,55 +80,29 @@ export default function Library() {
 
   const loadBooks = async () => {
     const data = await db.books.toArray()
+    // Ordine Crescente: Dal Primo Letto in Assoluto (in alto a sinistra) al Più Recente
     const sorted = data.sort((a, b) => {
-      const aScore = (a.readingYear ?? 0) * 100 + (a.readingMonth ?? 0)
-      const bScore = (b.readingYear ?? 0) * 100 + (b.readingMonth ?? 0)
-      if (bScore !== aScore) return bScore - aScore
-      return (b.createdAt ?? 0) - (a.createdAt ?? 0)
+      const aMonthNum = typeof a.readingMonth === 'number' ? a.readingMonth : 0
+      const bMonthNum = typeof b.readingMonth === 'number' ? b.readingMonth : 0
+      const aScore = (a.readingYear ?? 0) * 100 + aMonthNum
+      const bScore = (b.readingYear ?? 0) * 100 + bMonthNum
+      
+      if (aScore !== bScore) return aScore - bScore
+      return (a.createdAt ?? 0) - (b.createdAt ?? 0)
     })
     setBooks(sorted)
   }
 
-  const moveBook = async (filteredIndex: number, direction: 'up' | 'down') => {
-    const targetFilteredIndex = direction === 'up' ? filteredIndex - 1 : filteredIndex + 1
-    if (targetFilteredIndex < 0 || targetFilteredIndex >= filteredBooks.length) return
-
-    const currentBook = { ...filteredBooks[filteredIndex] }
-    const targetBook = { ...filteredBooks[targetFilteredIndex] }
-
-    if (!currentBook.id || !targetBook.id) return
-
-    const tempYear = currentBook.readingYear
-    const tempMonth = currentBook.readingMonth
-    currentBook.readingYear = targetBook.readingYear
-    currentBook.readingMonth = targetBook.readingMonth
-    targetBook.readingYear = tempYear
-    targetBook.readingMonth = tempMonth
-
-    let tempCreated = currentBook.createdAt ?? Date.now()
-    let targetCreated = targetBook.createdAt ?? (Date.now() - 1000)
-
-    if (tempCreated === targetCreated) {
-      tempCreated = Date.now()
-      targetCreated = Date.now() - 1000
+  const formatReadingMonth = (monthVal?: number | string) => {
+    if (!monthVal) return null
+    if (typeof monthVal === 'number' && monthVal >= 1 && monthVal <= 12) {
+      return MONTHS_IT[monthVal]
     }
-
-    currentBook.createdAt = targetCreated
-    targetBook.createdAt = tempCreated
-
-    await db.books.update(currentBook.id, {
-      readingYear: currentBook.readingYear,
-      readingMonth: currentBook.readingMonth,
-      createdAt: currentBook.createdAt
-    })
-    await db.books.update(targetBook.id, {
-      readingYear: targetBook.readingYear,
-      readingMonth: targetBook.readingMonth,
-      createdAt: targetBook.createdAt
-    })
-
-    await loadBooks()
+    return monthVal
   }
+
+  const isClassic = (b: Book) =>
+    b.classic === true || b.isClassic === true
 
   const years = [...new Set(books.map((b) => b.readingYear).filter(Boolean))] as number[]
 
@@ -146,6 +119,8 @@ export default function Library() {
     const matchesYear = yearFilter === 'all' || b.readingYear === yearFilter
     return matchesSearch && matchesYear
   })
+
+  const totalPages = filteredBooks.reduce((acc, b) => acc + (b.pages || 0), 0)
 
   const openAdd = () => {
     setEditingBook(null)
@@ -164,65 +139,31 @@ export default function Library() {
     loadBooks()
   }
 
-  // Touch Swipe
-  const touchStartRef = useRef<{ id: number; startX: number; startY: number } | null>(null)
-
-  const handleTouchStart = (e: React.TouchEvent, id?: number) => {
-    if (!id) return
-    touchStartRef.current = {
-      id,
-      startX: e.touches[0].clientX,
-      startY: e.touches[0].clientY
-    }
-  }
-
-  const handleTouchMove = (e: React.TouchEvent, id?: number) => {
-    if (!id || !touchStartRef.current || touchStartRef.current.id !== id) return
-
-    const deltaX = e.touches[0].clientX - touchStartRef.current.startX
-    const deltaY = e.touches[0].clientY - touchStartRef.current.startY
-
-    if (Math.abs(deltaY) > Math.abs(deltaX)) return
-
-    const baseOffset = openSwipeId === id ? -150 : 0
-    const newOffset = Math.min(0, Math.max(-160, baseOffset + deltaX))
-    setActiveOffset({ id, offset: newOffset })
-  }
-
-  const handleTouchEnd = (id?: number) => {
-    if (!id || !touchStartRef.current) return
-
-    if (activeOffset && activeOffset.id === id) {
-      if (activeOffset.offset < -75) {
-        setOpenSwipeId(id)
-      } else {
-        setOpenSwipeId(null)
-      }
-    }
-    setActiveOffset(null)
-    touchStartRef.current = null
-  }
-
-  const getCardOffset = (id?: number) => {
-    if (!id) return 0
-    if (activeOffset && activeOffset.id === id) return activeOffset.offset
-    return openSwipeId === id ? -150 : 0
-  }
-
   return (
     <div style={styles.container}>
-      {/* Header Minimalista */}
-      <header style={styles.header}>
-        <div>
-          <h1 style={styles.title}>Libreria</h1>
-          <span style={styles.subtitle}>{filteredBooks.length} titoli</span>
+      {/* Header */}
+      <header style={styles.headerGroup}>
+        <div style={styles.titleContainer}>
+          <h1 style={styles.headerTitle}>📖 Cronologia Visiva</h1>
+          <div style={styles.badgeRow}>
+            <div style={styles.badge}>
+              <span style={styles.badgeValue}>{filteredBooks.length}</span>
+              <span style={styles.badgeLabel}>
+                {filteredBooks.length === 1 ? 'libro' : 'libri'}
+              </span>
+            </div>
+            <div style={styles.badge}>
+              <span style={styles.badgeValue}>{totalPages.toLocaleString('it-IT')}</span>
+              <span style={styles.badgeLabel}>pagine</span>
+            </div>
+          </div>
         </div>
         <button onClick={openAdd} style={styles.addIconBtn} title="Aggiungi libro">
           ＋
         </button>
       </header>
 
-      {/* Bar dei filtri essenziale */}
+      {/* Filtri */}
       <div style={styles.filterRow}>
         <input
           placeholder="Cerca..."
@@ -251,7 +192,7 @@ export default function Library() {
       {showForm && (
         <div style={styles.modalOverlay}>
           <BookForm
-            book={editingBook}
+            book={editingBook as any}
             onClose={() => {
               setShowForm(false)
               setEditingBook(null)
@@ -261,306 +202,298 @@ export default function Library() {
         </div>
       )}
 
-      {/* Lista Libri Minimal */}
-      <div style={styles.list}>
-        {filteredBooks.map((book, index) => {
-          const monthName = book.readingMonth ? MONTHS[book.readingMonth - 1] : null
-          const isFirst = index === 0
-          const isLast = index === filteredBooks.length - 1
-          const readingDateStr = [monthName, book.readingYear].filter(Boolean).join(' ')
+      {/* Griglia Ordinata da Sinistra a Destra */}
+      <div style={styles.gridContainer}>
+        {filteredBooks.map((book) => {
+          const readingMonthFormatted = formatReadingMonth(book.readingMonth || book.month)
 
           return (
-            <div key={book.id} style={styles.swipeWrapper}>
-              {/* Azioni Swipe Nascoste */}
-              <div style={styles.actionsBehind}>
+            <div key={book.id} style={styles.card} onClick={() => openEdit(book)}>
+              {/* Contenitore Copertina Miniatura */}
+              <div style={styles.coverWrapper}>
+                {book.cover ? (
+                  <img
+                    src={book.cover}
+                    alt={book.title}
+                    style={styles.coverImage}
+                    loading="lazy"
+                  />
+                ) : (
+                  <div style={styles.placeholderCover}>
+                    <span style={styles.placeholderIcon}>📚</span>
+                    <span style={styles.placeholderTitle}>{book.title}</span>
+                  </div>
+                )}
+                {isClassic(book) && (
+                  <span style={styles.classicTag}>Classico</span>
+                )}
                 <button
-                  style={{ ...styles.actionBtn, opacity: isFirst ? 0.3 : 1 }}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    moveBook(index, 'up')
-                  }}
-                  disabled={isFirst}
-                >
-                  ↑
-                </button>
-                <button
-                  style={{ ...styles.actionBtn, opacity: isLast ? 0.3 : 1 }}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    moveBook(index, 'down')
-                  }}
-                  disabled={isLast}
-                >
-                  ↓
-                </button>
-                <button
-                  style={styles.actionBtn}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    openEdit(book)
-                  }}
-                >
-                  ✎
-                </button>
-                <button
-                  style={{ ...styles.actionBtn, color: '#FF3B30' }}
+                  style={styles.deleteQuickBtn}
                   onClick={(e) => {
                     e.stopPropagation()
                     deleteBook(book.id)
                   }}
+                  title="Elimina"
                 >
                   ✕
                 </button>
               </div>
 
-              {/* Card libro */}
-              <div
-                style={{
-                  ...styles.card,
-                  transform: `translateX(${getCardOffset(book.id)}px)`
-                }}
-                onTouchStart={(e) => handleTouchStart(e, book.id)}
-                onTouchMove={(e) => handleTouchMove(e, book.id)}
-                onTouchEnd={() => handleTouchEnd(book.id)}
-                onClick={() => {
-                  if (openSwipeId === book.id) {
-                    setOpenSwipeId(null)
-                  } else {
-                    openEdit(book)
-                  }
-                }}
-              >
-                {book.cover ? (
-                  <img src={book.cover} alt="" style={styles.cover} />
-                ) : (
-                  <div style={styles.coverPlaceholder} />
+              {/* Dettagli con Genere e Mese/Anno discreto */}
+              <div style={styles.cardInfo}>
+                <div style={styles.bookTitle} title={book.title}>
+                  {book.title}
+                </div>
+                <div style={styles.bookAuthor}>{book.author}</div>
+                
+                {book.genre && (
+                  <div style={styles.bookGenre}>{book.genre}</div>
                 )}
 
-                <div style={styles.details}>
-                  <h3 style={styles.bookTitle}>{book.title}</h3>
-                  <p style={styles.author}>{book.author}</p>
-
-                  <div style={styles.metaRow}>
-                    {book.genre && <span>{book.genre}</span>}
-                    {book.publicationYear && <span>• {book.publicationYear}</span>}
-                    {book.pages > 0 && <span>• {book.pages} p.</span>}
-                    {book.country && (
-                      <span>
-                        • {getCountryFlag(book.country)}
-                        {book.country}
-                      </span>
-                    )}
+                <div style={styles.metaRow}>
+                  <div style={styles.readingDateDiscrete}>
+                    {readingMonthFormatted ? `${String(readingMonthFormatted).slice(0, 3)} ` : ''}
+                    {book.readingYear || ''}
                   </div>
-
-                  {readingDateStr && (
-                    <div style={styles.readingDateRow}>
-                      {readingDateStr}
-                    </div>
-                  )}
+                  {book.country && <span>{getCountryFlag(book.country)}</span>}
                 </div>
-
-                {book.classic && <span style={styles.classicTag}>Classico</span>}
               </div>
             </div>
           )
         })}
 
         {filteredBooks.length === 0 && (
-          <div style={styles.emptyState}>
-            <p style={styles.emptyText}>Nessun libro trovato.</p>
-          </div>
+          <div style={styles.emptyState}>Nessun libro trovato.</div>
         )}
       </div>
     </div>
   )
 }
 
-/* ================= STILI MINIMALISTI ================= */
+/* ================= STILI COMPATTI PER LIBRERIA ================= */
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    padding: '24px 16px 100px',
-    background: '#F2F2F7',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+    background: '#FFFFFF',
+    color: '#000000',
     minHeight: '100vh',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
-    boxSizing: 'border-box'
+    padding: '24px 16px 80px',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif',
+    boxSizing: 'border-box',
+    maxWidth: '800px',
+    margin: '0 auto'
   },
-  header: {
+  headerGroup: {
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16
+    alignItems: 'flex-start',
+    paddingBottom: '12px',
+    borderBottom: '1px solid #E5E5E5'
   },
-  title: {
-    fontSize: 28,
+  titleContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 4
+  },
+  headerTitle: {
+    fontSize: '28px',
     fontWeight: 700,
-    color: '#1C1C1E',
+    color: '#000000',
     margin: 0,
     letterSpacing: '-0.5px'
   },
-  subtitle: {
-    fontSize: 13,
-    color: '#8E8E93',
-    fontWeight: 500
-  },
-  addIconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    border: 'none',
-    background: '#FFFFFF',
-    color: '#1C1C1E',
-    fontSize: 18,
-    fontWeight: 400,
-    cursor: 'pointer',
-    boxShadow: '3px 3px 8px #D8DBE0, -3px -3px 8px #FFFFFF',
+  badgeRow: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center'
+    gap: 6
+  },
+  badge: {
+    display: 'inline-flex',
+    alignItems: 'baseline',
+    gap: 4,
+    background: '#F2F2F7',
+    padding: '2px 8px',
+    borderRadius: 10
+  },
+  badgeValue: {
+    fontSize: 12,
+    fontWeight: 700,
+    color: '#000000'
+  },
+  badgeLabel: {
+    fontSize: 11,
+    fontWeight: 500,
+    color: '#8E8E93'
+  },
+  addIconBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    border: '1px solid #E5E5E5',
+    background: '#FFFFFF',
+    color: '#000000',
+    fontSize: 16,
+    fontWeight: 600,
+    cursor: 'pointer',
+    display: 'grid',
+    placeItems: 'center',
+    padding: 0
   },
   filterRow: {
     display: 'flex',
-    gap: 10,
-    marginBottom: 16
+    gap: 8
   },
   search: {
     flex: 1,
-    padding: '10px 14px',
-    borderRadius: 12,
-    border: 'none',
-    background: '#F2F2F7',
-    fontSize: 14,
-    color: '#1C1C1E',
-    boxShadow: 'inset 2px 2px 5px #D8DBE0, inset -2px -2px 5px #FFFFFF',
-    outline: 'none',
-    boxSizing: 'border-box'
+    padding: '8px 12px',
+    borderRadius: 10,
+    border: '1px solid #E5E5E5',
+    background: '#FFFFFF',
+    fontSize: 13,
+    color: '#000000',
+    outline: 'none'
   },
   select: {
-    padding: '10px 12px',
-    borderRadius: 12,
-    border: 'none',
-    background: '#F2F2F7',
+    padding: '8px 10px',
+    borderRadius: 10,
+    border: '1px solid #E5E5E5',
+    background: '#FFFFFF',
     color: '#8E8E93',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: 600,
-    boxShadow: 'inset 2px 2px 5px #D8DBE0, inset -2px -2px 5px #FFFFFF',
     outline: 'none',
     cursor: 'pointer'
   },
-  list: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 10
-  },
-  swipeWrapper: {
-    position: 'relative',
-    borderRadius: 16,
-    overflow: 'hidden'
-  },
-  actionsBehind: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    bottom: 0,
-    width: 150,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingRight: 6,
-    background: '#F2F2F7',
-    zIndex: 1
-  },
-  actionBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 10,
-    border: 'none',
-    background: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
-    cursor: 'pointer',
-    boxShadow: '2px 2px 5px #D8DBE0, -2px -2px 5px #FFFFFF',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center'
+  gridContainer: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
+    gap: '18px 12px',
+    marginTop: '4px'
   },
   card: {
-    position: 'relative',
-    zIndex: 2,
-    display: 'flex',
-    alignItems: 'flex-start',
-    gap: 12,
-    padding: 10,
-    borderRadius: 16,
-    background: '#FFFFFF',
-    boxShadow: '4px 4px 12px #D8DBE0, -4px -4px 12px #FFFFFF',
-    transition: 'transform 0.15s ease-out',
-    touchAction: 'pan-y',
-    userSelect: 'none',
-    cursor: 'pointer'
-  },
-  cover: {
-    width: 42,
-    height: 62,
-    borderRadius: 6,
-    objectFit: 'cover',
-    flexShrink: 0
-  },
-  coverPlaceholder: {
-    width: 42,
-    height: 62,
-    borderRadius: 6,
-    background: '#E5E5EA',
-    flexShrink: 0
-  },
-  details: {
     display: 'flex',
     flexDirection: 'column',
-    gap: 2,
-    flex: 1,
-    paddingRight: 20
+    cursor: 'pointer'
   },
-  bookTitle: {
-    fontSize: 14,
+  coverWrapper: {
+    position: 'relative',
+    width: '100%',
+    aspectRatio: '2/3',
+    borderRadius: '6px',
+    overflow: 'hidden',
+    boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+    border: '1px solid #E5E5E5',
+    background: '#F9F9FB'
+  },
+  coverImage: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover'
+  },
+  placeholderCover: {
+    width: '100%',
+    height: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '6px',
+    boxSizing: 'border-box',
+    textAlign: 'center',
+    background: '#F2F2F7'
+  },
+  placeholderIcon: {
+    fontSize: '18px',
+    marginBottom: '4px'
+  },
+  placeholderTitle: {
+    fontSize: '9px',
     fontWeight: 600,
-    color: '#1C1C1E',
-    margin: 0,
-    wordBreak: 'break-word'
+    color: '#8E8E93',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    display: '-webkit-box',
+    WebkitLineClamp: 3,
+    WebkitBoxOrient: 'vertical'
   },
   classicTag: {
     position: 'absolute',
-    bottom: 10,
-    right: 10,
-    fontSize: '11px',
-    color: '#555555',
-    border: '1px solid #CCCCCC',
-    padding: '1px 5px',
-    borderRadius: '2px',
+    top: 4,
+    left: 4,
+    background: 'rgba(0, 0, 0, 0.75)',
+    color: '#FFFFFF',
+    fontSize: '8px',
+    fontWeight: 600,
+    padding: '1px 4px',
+    borderRadius: '3px',
     textTransform: 'uppercase'
   },
-  author: {
-    fontSize: 12,
+  deleteQuickBtn: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    border: 'none',
+    background: 'rgba(0, 0, 0, 0.6)',
+    color: '#FFFFFF',
+    fontSize: 9,
+    cursor: 'pointer',
+    display: 'grid',
+    placeItems: 'center',
+    padding: 0
+  },
+  cardInfo: {
+    marginTop: '6px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '2px'
+  },
+  bookTitle: {
+    fontSize: '11px',
+    fontWeight: 600,
+    color: '#000000',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis'
+  },
+  bookAuthor: {
+    fontSize: '10px',
+    color: '#3A3A3C',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis'
+  },
+  bookGenre: {
+    fontSize: '9px',
     color: '#8E8E93',
-    margin: 0,
-    wordBreak: 'break-word'
+    fontStyle: 'italic',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis'
   },
   metaRow: {
-    fontSize: 11,
-    color: '#A1A1A6',
     display: 'flex',
-    flexWrap: 'wrap',
-    gap: 4,
     alignItems: 'center',
-    marginTop: 2,
-    wordBreak: 'break-word'
+    justifyContent: 'space-between',
+    marginTop: '2px'
   },
-  readingDateRow: {
-    fontSize: 12,
+  readingDateDiscrete: {
+    fontSize: '10px',
     fontWeight: 600,
-    color: 'rgba(0, 0, 0, 0.85)',
-    letterSpacing: '-0.3px',
-    marginTop: 3
+    color: '#1C1C1E'
+  },
+  emptyState: {
+    gridColumn: '1 / -1',
+    padding: '24px 0',
+    fontSize: '12px',
+    color: '#8E8E93',
+    fontStyle: 'italic',
+    textAlign: 'center'
   },
   modalOverlay: {
     position: 'fixed',
@@ -571,14 +504,5 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center'
-  },
-  emptyState: {
-    padding: '30px 16px',
-    textAlign: 'center'
-  },
-  emptyText: {
-    fontSize: 13,
-    color: '#8E8E93',
-    margin: 0
   }
 }
